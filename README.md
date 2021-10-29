@@ -1,0 +1,2 @@
+# dra-programmatic-all
+# dra-programmatic-top_line  ##contains old top_line reporting that we used to surface programmatic revenue data from 2018 - 2020 replaced with programmatic_all data stored in GCS bucket: https://console.cloud.google.com/storage/browser/meredith-dra-archive/meredith-switchboard_bq-archive/programmatic-top_line?pageState=(%22StorageObjectListTable%22:(%22f%22:%22%255B%255D%22))&amp;amp;project=meredith-switchboard&amp;amp;prefix=&amp;amp;forceOnObjectsSortingFiltering=false    ##repo managed by BJ, contact for questions
