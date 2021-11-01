@@ -1,0 +1,64 @@
+WITH verizon_raw as (
+    SELECT
+        date,
+        advertiser,
+        placement_type_name,
+        position,
+        country_id,
+        country_name,
+        country_name_type,
+        device_type_name,
+        seat_name,
+        site,
+        buyer,
+        bidder,
+        publisher_revenue,
+        ads_delivered,
+        ads_clicked,
+        switchboard_processing_time
+    FROM `meredith-switchboard.verizon.verizon_analytics_*`
+),
+
+verizon_progall as (
+    SELECT
+       'Verizon API' AS Source,
+        date AS Date,
+        'Verizon' AS Partner,
+        CONCAT('Verizon', ';', position) AS Tag_Site,
+        'Open' AS Transaction_type,
+        '' AS Ad_size_initial,
+        '' AS Ad_size,
+        CASE
+            WHEN placement_type_name = 'Banner' THEN 'Display'
+            ELSE 'Video'
+            END AS Ad_type,
+        'HB' AS Path_type,
+        device_type_name AS Device_type_initial,
+        CASE
+            WHEN device_type_name = 'Phone' THEN 'MobileWeb'
+            WHEN device_type_name = 'Personal Computer' OR device_type_name = 'Tablet' THEN 'Desktop'
+            WHEN device_type_name = 'Set Top Box' OR device_type_name = 'Connected TV' THEN 'Connected TV'
+            ELSE 'Unknown'
+            END AS Device_type,
+        country_name AS Country_initial,
+        CASE
+            WHEN country_name = 'United States' THEN 'USA'
+            ELSE 'XUS'
+            END AS Country,
+        buyer AS DSP_initial,
+        seat_name AS Buyer_initial,
+        advertiser AS Advertiser_initial,
+        '' AS Deal_Id,
+        '' AS Deal_Name,
+        publisher_revenue AS Net_Revenue,
+        (publisher_revenue / 0.85) AS Gross_Revenue,
+        ads_delivered AS Imps,
+        NULL AS active_view_measured_impressions,
+        NULL AS active_view_viewed_impressions,
+        NULL AS Bid_requests,
+        NULL AS Bid_repsonses
+    FROM verizon_raw
+)
+
+SELECT *
+FROM verizon_progall

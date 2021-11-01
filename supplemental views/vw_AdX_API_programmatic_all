@@ -1,0 +1,131 @@
+WITH
+  select_unique_adx_deals AS (
+SELECT * FROM (
+
+SELECT Deal_names, Deal_IDs, Estimated_Revenue, Impressions, _table_suffix as tableID FROM `meredith-switchboard.programmatic_all.adx_deals_mapping_*`
+group by Deal_names, Deal_IDs, Estimated_Revenue, Impressions, _table_suffix
+) mapping
+
+INNER JOIN (
+SELECT Deal_IDs as deal_ids_dedupe, MAX(_table_suffix) as tableID_dedupe FROM `meredith-switchboard.programmatic_all.adx_deals_mapping_*`
+group by Deal_IDs ) as dedupe
+on
+mapping.Deal_IDs = dedupe.deal_ids_dedupe
+AND
+mapping.tableID = dedupe.tableID_dedupe
+  ),
+
+  AdX_api_mapped AS (
+    SELECT
+      A.Source,
+      A.Date,
+      A.Partner,
+      A.Tag_Site,
+      A.Transaction_type,
+      A.Ad_Size_initial,
+      A.Ad_Size,
+      CASE
+        WHEN (A.Tag_Site NOT LIKE "%VDN%" OR A.Tag_Site NOT LIKE "%vdn%") AND (A.Ad_Size_initial LIKE "%Video%" OR A.Ad_Size_initial LIKE "%video%") THEN "Video"
+      ELSE
+      A.Ad_type
+    END
+      AS Ad_type,
+      A.Path_type,
+      A.Device_type_initial,
+      A.Device_type,
+      A.Country_initial,
+      A.Country,
+      A.DSP_initial,
+      A.Buyer_initial,
+      A.Advertiser_initial,
+      A.Deal_Id,
+      B.Deal_names AS Deal_Name,
+      A.Net_Revenue,
+      A.Gross_Revenue,
+      A.Imps,
+      A.active_view_measured_impressions,
+      A.active_view_viewed_impressions,
+      A.Bid_requests,
+      A.Bid_repsonses
+    FROM
+      `meredith-switchboard.programmatic_all.AdX_api_*` AS A
+    LEFT JOIN (
+SELECT * FROM (
+
+SELECT Deal_names, Deal_IDs, Estimated_Revenue, Impressions, _table_suffix as tableID FROM `meredith-switchboard.programmatic_all.adx_deals_mapping_*`
+group by Deal_names, Deal_IDs, Estimated_Revenue, Impressions, _table_suffix
+) mapping
+
+INNER JOIN (
+SELECT Deal_IDs as deal_ids_dedupe, MAX(_table_suffix) as tableID_dedupe FROM `meredith-switchboard.programmatic_all.adx_deals_mapping_*`
+group by Deal_IDs ) as dedupe
+on
+mapping.Deal_IDs = dedupe.deal_ids_dedupe
+AND
+mapping.tableID = dedupe.tableID_dedupe
+) AS B
+    ON
+      A.Deal_Id = B.Deal_IDs
+  ),
+
+   AdX_bid_prog_all_proxy AS (
+   SELECT * FROM (
+  SELECT
+    "AdX API" AS Source,
+    Date AS Date,
+    "AdX" AS Partner,
+    "" AS Tag_Site,
+    "PMP" AS Transaction_type,
+    "" AS Ad_Size_initial,
+    "" AS Ad_Size,
+    "" AS Ad_type,
+    "AdX" AS Path_type,
+    "" AS Device_type_initial,
+    "" AS Device_type,
+    "" AS Country_initial,
+    "" AS Country,
+    "" AS DSP_initial,
+    "" AS Buyer_initial,
+    "" AS Advertiser_initial,
+    a.Deal_IDs AS Deal_Id,
+    b.Deal_names AS Deal_Name,
+    CAST(Net_Revenue AS FLOAT64) AS Net_Revenue,
+    CAST(Gross_Revenue AS FLOAT64) AS Gross_Revenue,
+    NULL AS Imps,
+    NULL AS active_view_measured_impressions,
+    NULL AS active_view_viewed_impressions,
+    Deals_ad_requests AS Bid_requests,
+    Deals_bid_responses AS Bid_responses
+  FROM (
+    SELECT
+      *,
+      NULL AS Net_Revenue,
+      NULL AS Gross_Revenue
+    FROM
+      `meredith-switchboard.adx.adx_deals_detail_*`
+    WHERE
+      Date(Date) >= "2020-01-01" ) as A
+
+    LEFT JOIN
+      select_unique_adx_deals AS B
+    ON
+      A.Deal_IDs = B.Deal_IDs
+
+    )),
+
+  Adx_unioned AS (
+    SELECT
+      *
+     FROM
+      AdX_api_mapped
+     UNION ALL
+     SELECT
+      *
+     FROM
+      AdX_bid_prog_all_proxy
+    )
+
+SELECT
+  *
+FROM
+  AdX_unioned

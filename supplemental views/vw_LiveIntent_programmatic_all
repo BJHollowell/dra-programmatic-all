@@ -1,0 +1,39 @@
+WITH LiveIntent_adsize_mapping AS(
+SELECT
+  A.Source,
+  A.Date,
+  A.Partner,
+  A.Tag_Site,
+  A.Transaction_type,
+  A.Ad_size_initial,
+  B.adsize AS Ad_size,
+  A.Ad_type,
+  A.Path_type,
+  A.Device_type_initial,
+  A.Device_type,
+  A.Country_initial,
+  Cast ('Unknown' as string) as Country,
+  A.DSP_initial,
+  A.Buyer_initial,
+  A.Advertiser_initial,
+  A.Deal_Id,
+  A.Deal_Name,
+  A.Net_Revenue,
+  A.Gross_Revenue,
+  A.Imps,
+  A.active_view_measured_impressions,
+  A.active_view_viewed_impressions,
+  A.Bid_requests,
+  A.Bid_repsonses
+FROM
+  `meredith-switchboard.programmatic_all.LiveIntent_*` AS A
+LEFT JOIN
+  `meredith-switchboard.summary_reports.programmatic_tag_mapping` AS B
+ON
+  A.Tag_Site = B.Tag_Site
+)
+
+Select
+  *
+FROM
+  LiveIntent_adsize_mapping

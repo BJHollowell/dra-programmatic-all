@@ -1,0 +1,55 @@
+WITH
+  GAM_PG_and_PD_deal_id AS (
+  SELECT
+    B.DealId as DealID,
+    A.* EXCEPT(Deal_Id)
+  FROM
+    `meredith-switchboard.programmatic_all.GAM_non_open_ebda_api_*` AS A
+  JOIN
+    `meredith-switchboard.dfp_raw_3865.vw_dt_line_item_deal_id` AS B
+  ON
+    A.Deal_Id = B.LineItemId),
+  GAM_PG_and_PD_final AS (
+  SELECT
+    Source,
+    Date,
+    Partner,
+    Tag_Site,
+    CASE
+      WHEN Transaction_Type = "PD" THEN "PMP"
+    ELSE
+      Transaction_type
+    END
+      AS Transaction_type,
+    Ad_Size_initial,
+    Ad_Size,
+    Ad_type,
+    CASE
+      WHEN Transaction_Type = "PD" THEN "PD"
+    ELSE
+      Path_type
+    END
+      AS Path_type,
+    Device_type_initial,
+    Device_type,
+    Country_initial,
+    Country,
+    Buyer_initial as DSP_initial,
+    Buyer_initial,
+    Advertiser_initial,
+    CAST(DealID as STRING) as Deal_Id,
+    Deal_Name,
+    Net_Revenue,
+    Gross_Revenue,
+    Imps,
+    active_view_measured_impressions,
+    active_view_viewed_impressions,
+    Bid_requests,
+    Bid_repsonses as Bid_responses
+  FROM
+    GAM_PG_and_PD_deal_id)
+
+SELECT
+  *
+FROM
+  GAM_PG_and_PD_final

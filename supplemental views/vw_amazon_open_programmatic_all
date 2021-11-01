@@ -1,0 +1,48 @@
+## this view was created per the Gross_Revenue instruction/updates in the Market 2.0 g-sheet schema (BJ 6/30/2021)
+
+WITH amazon_open_programmatic_all AS (
+SELECT
+    *
+FROM
+    `meredith-switchboard.programmatic_all.amazon_open_*`
+)
+
+SELECT
+    source,
+    date,
+    partner,
+    tag_site,
+    transaction_type,
+    ad_size_initial,
+    ad_size,
+    ad_type,
+    path_type,
+    device_type_initial,
+    device_type,
+    country_initial,
+    country,
+    dsp_initial,
+    buyer_initial,
+    advertiser_initial,
+    deal_id,
+    deal_name,
+    net_revenue,
+    CASE
+        WHEN partner = 'DistrictM' THEN (gross_revenue / 0.90)
+        WHEN partner = 'DMX' THEN (gross_revenue / 0.90)
+        WHEN partner = 'EMX' THEN (gross_revenue / 0.90)
+        WHEN partner = 'GumGum' THEN (gross_revenue / 0.90)
+        WHEN partner = 'Pubmatic' THEN (gross_revenue / 0.82)
+        WHEN partner = 'Pulsepoint' THEN (gross_revenue / 0.80)
+        WHEN partner = 'Sharethrough' THEN (gross_revenue / 0.90)
+        WHEN partner = 'Sonobi' THEN (gross_revenue / 0.85)
+        WHEN partner = 'Verizon' THEN (gross_revenue / 0.85)
+        WHEN partner = 'YieldMo' THEN (gross_revenue / 0.70)
+        ELSE gross_revenue
+    END AS gross_revenue,
+    imps,
+    active_view_measured_impressions,
+    active_view_viewed_impressions,
+    bid_requests,
+    bid_repsonses
+FROM amazon_open_programmatic_all

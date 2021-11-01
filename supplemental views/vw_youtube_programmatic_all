@@ -1,0 +1,23 @@
+WITH youtube_prog_all AS (
+  SELECT
+    *
+  FROM
+    `meredith-switchboard.programmatic_all.YouTube_*`
+  UNION ALL
+  SELECT
+    *
+  FROM
+    `meredith-switchboard.programmatic_all.tbl_YouTube_revenue_o_and_o`
+  UNION ALL
+  SELECT
+    *
+  FROM
+    `meredith-switchboard.programmatic_all.tbl_YouTube_revenue_partners`
+  )
+
+SELECT
+  *
+FROM
+  youtube_prog_all
+WHERE
+  Tag_Site IS NOT NULL

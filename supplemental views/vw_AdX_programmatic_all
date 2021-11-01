@@ -1,0 +1,72 @@
+WITH
+  AdX_dtf_agg AS(
+  SELECT
+    filename AS filename_dupe,
+    max_time
+  FROM (
+    SELECT
+      filename,
+      MAX(switchboard_processing_time) OVER (PARTITION BY filename) AS max_time
+    FROM
+      `meredith-switchboard.programmatic_all.AdX_programmatic_all_*`
+    GROUP BY
+      filename,
+      switchboard_processing_time)
+  GROUP BY
+    filename,
+    max_time),
+  AdX_dtf_dedupe AS(
+  SELECT
+    *
+  FROM
+    `meredith-switchboard.programmatic_all.AdX_programmatic_all_*` AS og
+  LEFT JOIN (
+    SELECT
+      *
+    FROM
+      AdX_dtf_agg) AS dupe
+  ON
+    og.filename = dupe.filename_dupe
+    AND og.switchboard_processing_time = dupe.max_time),
+  AdX_mapping AS(
+  SELECT
+    A.Source,
+    A.Date,
+    A.Partner,
+    A.Tag_Site,
+    A.Transaction_type,
+    A.Ad_Size_initial,
+    A.Ad_Size,
+    A.Ad_type,
+    A.Path_type,
+    A.Device_type_initial,
+    A.Device_type,
+    A.Country_initial,
+    A.Country,
+    A.Buyer_initial as DSP_initial,
+    A.Buyer_initial,
+    A.Advertiser_initial,
+    A.Deal_Id,
+    B.deal_name as Deal_Name,
+    A.Net_Revenue,
+    A. Gross_Revenue,
+    A.Imps,
+    NULL AS active_view_measured_impressions,
+    NULL AS active_view_viewed_impressions,
+    NULL AS Bid_requests,
+    NULL AS Bid_responses
+  FROM
+    AdX_dtf_dedupe AS A
+  LEFT JOIN
+    `meredith-switchboard.indexexchange_audit_logs.mapping_deals` AS B
+  ON
+    A.Deal_ID = B.deal_id
+  WHERE
+    max_time IS NOT NULL)
+
+SELECT
+  *
+FROM
+  AdX_mapping
+WHERE
+  Date >= "2020-07-02"

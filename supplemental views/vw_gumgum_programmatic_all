@@ -1,0 +1,62 @@
+WITH
+  gumgum_dedupe AS(
+  SELECT
+    * EXCEPT(table_num,
+      file_count,
+      file_max)
+  FROM (
+    SELECT
+      *,
+      COUNT(DISTINCT(table_num)) OVER (PARTITION BY Date) AS file_count,
+      MAX(table_num) OVER (PARTITION BY Date) AS file_max
+    FROM (
+      SELECT
+        *,
+        _Table_Suffix AS table_num
+      FROM
+        `meredith-switchboard.programmatic_all.Gumgum_*` ) )
+  WHERE
+    (file_count = 1)
+    OR (file_count > 1
+      AND table_num = file_max) ),
+
+  gumgum_final AS(
+  SELECT
+    A.Source,
+    A.Date,
+    A.Partner,
+    A.Tag_Site,
+    A.Transaction_type,
+    A.Ad_Size_initial,
+    B.Adsize AS Ad_Size,
+    A.Ad_type,
+    A.Path_type,
+    A.Device_type_initial,
+    B.device AS Device_type,
+    A.Country_initial,
+    B.country AS Country,
+    A.DSP_initial,
+    A.Buyer_initial,
+    A.Advertiser_initial,
+    A.Deal_Id,
+    A.Deal_Name,
+    A.Net_Revenue,
+    A.Gross_Revenue,
+    CAST(A.Imps AS INT64) AS Imps,
+    A.active_view_measured_impressions,
+    A.active_view_viewed_impressions,
+    A.Bid_requests,
+    A.Bid_repsonses AS Bid_responses
+  FROM
+    gumgum_dedupe AS A
+  LEFT JOIN
+    `meredith-switchboard.summary_reports.programmatic_tag_mapping` AS B
+  ON
+    A.Tag_Site = B.Tag_Site)
+
+SELECT
+  *
+FROM
+  gumgum_final
+WHERE
+  Date(Date) >= "2020-01-01"

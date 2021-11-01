@@ -1,0 +1,96 @@
+WITH
+  select_unique_rogers_allrecipes AS (
+  SELECT
+    * EXCEPT(table_num,
+      file_count,
+      file_max)
+  FROM (
+    SELECT
+      *,
+      COUNT(DISTINCT(table_num)) OVER (PARTITION BY Date) AS file_count,
+      MAX(table_num) OVER (PARTITION BY Date) AS file_max
+    FROM (
+      SELECT
+        *,
+        _Table_Suffix AS table_num
+      FROM
+        `meredith-switchboard.programmatic_all.Rogers_AllRecipes_*` ) )
+  WHERE
+    (file_count = 1)
+    OR (file_count > 1
+      AND table_num = file_max) ),
+
+  select_unique_rogers_monthly AS (
+  SELECT
+    * EXCEPT(table_num,
+      file_count,
+      file_max)
+  FROM (
+    SELECT
+      *,
+      COUNT(DISTINCT(table_num)) OVER (PARTITION BY Date) AS file_count,
+      MAX(table_num) OVER (PARTITION BY Date) AS file_max
+    FROM (
+      SELECT
+        *,
+        _Table_Suffix AS table_num
+      FROM
+        `meredith-switchboard.programmatic_all.Rogers_meredith_monthly_*` ) )
+  WHERE
+    (file_count = 1)
+    OR (file_count > 1
+      AND table_num = file_max) ),
+
+  Rogers_combined AS (
+  SELECT
+    *
+  FROM
+    select_unique_rogers_allrecipes
+  UNION ALL
+  SELECT
+    *
+  FROM
+    select_unique_rogers_monthly),
+
+  Rogers_prog_all AS (
+  SELECT
+    Source,
+    Date,
+    Partner,
+    Tag_Site,
+    Transaction_type,
+    Ad_Size_initial,
+    Ad_Size,
+    Ad_type,
+    Path_type,
+    Device_type_initial,
+    Device_type,
+    Country_initial,
+    Country,
+    DSP_initial,
+    Buyer_initial,
+    Advertiser_initial,
+    Deal_Id,
+    Deal_Name,
+    CASE
+      WHEN DATE(Date) <= "2020-03-31" THEN (Net_Revenue * 0.7) * 0.7
+      WHEN Date(Date) >= "2021-01-01" THEN (Net_Revenue * 0.7) * 0.7
+    ELSE
+        (Net_Revenue * 0.7) * 0.75
+    END
+      AS Net_Revenue,
+    Gross_Revenue,
+    Imps,
+    active_view_measured_impressions,
+    active_view_viewed_impressions,
+    Bid_requests,
+    Bid_repsonses
+  FROM
+    Rogers_combined)
+
+SELECT
+  *
+FROM
+  Rogers_prog_all
+WHERE
+  Date(Date) >= "2020-01-01"

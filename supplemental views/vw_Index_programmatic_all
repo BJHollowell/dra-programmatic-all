@@ -1,0 +1,136 @@
+WITH Index_cal_agg AS(
+  SELECT
+    filename as filename_dupe,
+    max_time
+  FROM (
+    SELECT
+      filename,
+      MAX(switchboard_processing_time) OVER (PARTITION BY filename) as max_time
+    FROM
+      `meredith-switchboard.programmatic_all.index_exchange_*`
+    GROUP BY
+      filename,
+      switchboard_processing_time)
+  GROUP BY
+    filename,
+    max_time),
+
+Index_cal_dedupe AS(
+  SELECT
+    *
+  FROM
+    `meredith-switchboard.programmatic_all.index_exchange_*` as og
+  LEFT JOIN (
+    SELECT
+      *
+    FROM
+      Index_cal_agg) as dupe
+    ON
+      og.filename = dupe.filename_dupe
+    AND
+      og.switchboard_processing_time = dupe.max_time),
+
+Index_mapping AS(
+  SELECT
+    I.Source,
+    I.Date,
+    I.Partner,
+    I.Tag_Site,
+    I.Transaction_type,
+    ##B.Site,
+    ##B.Tier,
+    I.Ad_Size_initial,
+    CASE
+      WHEN I.Source = "Index CAL_OB" AND I.Ad_Size = "300x250" THEN "300x250"
+      WHEN I.Source = "Index CAL_OB" AND I.Ad_Size = "320x50" THEN "320x50"
+      WHEN I.Source = "Index CAL_OB" AND I.Ad_Size = "728x90" THEN "728x90"
+      WHEN I.Source = "Index CAL_OB" AND I.Ad_Size = "300x600" THEN "300x600"
+      WHEN I.Source = "Index CAL_OB" AND I.Ad_Size = "300x1050" THEN "300x1050"
+      WHEN I.Source = "Index CAL" THEN I.Ad_Size
+    ELSE
+      "Video/Overlay"
+    END
+      AS Ad_Size,
+    I.Ad_type,
+    I.Path_type,
+    I.Device_type_initial,
+    I.Device_type,
+    I.Country_initial,
+    I.Country,
+    I.DSP_initial,
+    I.Buyer_initial,
+    I.Advertiser_initial,
+    I.Deal_Id,
+    I.Deal_Name,
+    I.Net_Revenue,
+    I.Gross_Revenue,
+    I.Imps,
+    NULL AS active_view_measured_impressions,
+    NULL AS active_view_viewed_impressions,
+    NULL AS Bid_requests,
+    NULL AS Bid_responses
+  FROM
+    Index_cal_dedupe AS I
+  LEFT JOIN
+    `meredith-switchboard.summary_reports.programmatic_tag_mapping` as B
+  ON
+    I.Tag_Site = B.Tag_Site
+  WHERE
+    max_time IS NOT NULL
+  ),
+
+  Index_bid_prog_all_proxy AS (
+  SELECT
+    "Index CAL" AS Source,
+    day AS Date,
+    "Index" AS Partner,
+    "" AS Tag_Site,
+    "PMP" AS Transaction_type,
+    "" AS Ad_Size_initial,
+    "" AS Ad_Size,
+    "" AS Ad_type,
+    "HB" AS Path_type,
+    "" AS Device_type_initial,
+    "" AS Device_type,
+    "" AS Country_initial,
+    "" AS Country,
+    "" AS DSP_initial,
+    "" AS Buyer_initial,
+    "" AS Advertiser_initial,
+    deal_id AS Deal_Id,
+    deal_name AS Deal_Name,
+    CAST(Net_Revenue AS FLOAT64) AS Net_Revenue,
+    CAST(Gross_Revenue AS FLOAT64) AS Gross_Revenue,
+    NULL AS Imps,
+    NULL AS active_view_measured_impressions,
+    NULL AS active_view_viewed_impressions,
+    bid_request AS Bid_requests,
+    bids_returned AS Bid_responses
+  FROM (
+    SELECT
+      *,
+      NULL AS Net_Revenue,
+      NULL AS Gross_Revenue
+    FROM
+      `meredith-switchboard.indexexchange.ix_pmp_bid_volume_202*`
+    WHERE
+      Date(day) >= "2020-01-01"
+    )),
+
+  Index_unioned AS (
+    SELECT
+      *
+    FROM
+      Index_mapping
+    UNION ALL
+    SELECT
+      *
+    FROM
+      Index_bid_prog_all_proxy
+    )
+
+
+SELECT
+  *
+FROM
+  Index_unioned

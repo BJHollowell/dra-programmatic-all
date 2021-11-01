@@ -1,0 +1,78 @@
+WITH
+  pubmatic_unioned AS (
+  SELECT
+    *
+  FROM
+    `meredith-switchboard.programmatic_all.pubmatic_emea_*`
+  UNION ALL
+  SELECT
+    *
+  FROM
+    `meredith-switchboard.programmatic_all.pubmatic_intl_v1*`
+  UNION ALL
+  SELECT
+    *
+  FROM
+    `meredith-switchboard.programmatic_all.pubmatic_intl_v2*`
+  UNION ALL
+  SELECT
+    *
+  FROM
+    `meredith-switchboard.programmatic_all.pubmatic_intl_v3_*`
+  UNION ALL
+  SELECT
+    *
+  FROM
+    `meredith-switchboard.programmatic_all.pubmatic_intl_v4_*`
+  UNION ALL
+  SELECT
+    *
+  FROM
+    `meredith-switchboard.programmatic_all.pubmatic_us_*` ),
+
+  pubmatic_mapping AS (
+  SELECT
+    A.Source,
+    A.Date,
+    A.Partner,
+    A.Tag_Site,
+    A.Transaction_type,
+    A.Ad_size_initial,
+    B.adsize AS Ad_size,
+    CASE
+      WHEN A.Tag_Site LIKE '%preroll%' OR A.Tag_Site LIKE '%Preroll%' THEN "Video"
+      WHEN A.Tag_Site LIKE '%dinnerspinner%' OR A.Tag_Site LIKE '%DinnerSpinner%' THEN "App"
+      ELSE "Display"
+      END AS Ad_type,
+    CASE
+      WHEN A.Path_type = "tag in adserver" THEN "Tag in adserver"
+      ELSE
+      A.Path_type
+      END AS Path_type,
+    A.Device_type_initial,
+    B.Device AS Device_type,
+    A.Country_initial,
+    A.Country,
+    A.DSP_initial,
+    A.Buyer_initial,
+    A.Advertiser_initial,
+    A.Deal_Id,
+    A.Deal_Name,
+    A.Net_Revenue,
+    A.Gross_Revenue,
+    A.Imps,
+    A.active_view_measured_impressions,
+    A.active_view_viewed_impressions,
+    A.Bid_requests,
+    A.Bid_repsonses
+  FROM
+    pubmatic_unioned AS A
+  LEFT JOIN
+    `meredith-switchboard.summary_reports.programmatic_tag_mapping` AS B
+  ON
+    A.Tag_Site = B.Tag_Site)
+
+SELECT
+  *
+FROM
+  pubmatic_mapping

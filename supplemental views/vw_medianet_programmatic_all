@@ -1,0 +1,137 @@
+WITH
+
+old_chanelwise AS (
+  SELECT
+    '' AS reoprt_date,
+    date AS date,
+    '' AS adtag,
+    NULL AS adtag_id,
+    channelName AS channel,
+    NULL AS channel_id,
+    '' AS site,
+    impressions AS impressions,
+    estimatedRevenue AS estimated_revenue,
+    NULL AS viewable_rpm,
+    NULL AS viewable_impression_percent,
+    rpm AS rpm
+  FROM `meredith-switchboard.media_net.channelwise_*`
+),
+
+chanelwise_base AS (
+  SELECT * FROM `meredith-switchboard.media_net.medianet_api_report_*`
+  UNION ALL
+  SELECT * FROM old_chanelwise
+),
+
+tag_mapping AS (SELECT * EXCEPT(tag_site), tag_site AS tag_site_map FROM `meredith-switchboard.summary_reports.programmatic_tag_mapping`
+),
+
+chanelwise_agg as (
+  SELECT
+    'Medianet API2' AS Source,
+    date AS Date,
+    'Media.net' AS Partner,
+    CONCAT('Media.net', ';', channel) AS Tag_Site,
+    'Open' AS Transaction_type,
+    '' AS Ad_size_initial,
+    'various' AS Ad_size,
+    'NonGam Display' AS Ad_type,
+    'Indirect' AS Path_type,
+    '' AS Device_type_initial,
+    '' AS Device_type,
+    '' AS Country_initial,
+    '' AS Country,
+    '' AS DSP_initial,
+    '' AS Buyer_initial,
+    '' AS Advertiser_initial,
+    '' AS Deal_Id,
+    '' AS Deal_Name,
+    (estimated_revenue * 0.7) AS Net_Revenue,
+    estimated_revenue AS Gross_Revenue,
+    impressions AS Imps,
+    NULL AS active_view_measured_impressions,
+    NULL AS active_view_viewed_impressions,
+    NULL AS Bid_requests,
+    NULL AS Bid_repsonses
+
+  FROM chanelwise_base
+),
+
+chanelwise_joined AS (
+  SELECT
+    Source,
+    Date,
+    Partner,
+    Tag_Site,
+    Transaction_type,
+    Ad_size_initial,
+    map.adsize AS Ad_size,
+    Ad_type,
+    Path_type,
+    Device_type_initial,
+    map.Device AS Device_type,
+    Country_initial,
+    map.Country AS Country,
+    DSP_initial,
+    Buyer_initial,
+    Advertiser_initial,
+    Deal_Id,
+    Deal_Name,
+    Net_Revenue,
+    Gross_Revenue,
+    Imps,
+    active_view_measured_impressions,
+    active_view_viewed_impressions,
+    Bid_requests,
+    Bid_repsonses
+  FROM chanelwise_agg AS raw
+  LEFT JOIN tag_mapping AS map
+  ON raw.Tag_Site = map.tag_site_map
+),
+
+medianet_base AS (SELECT * FROM `meredith-switchboard.media_net.medianet_deal_report_*`
+),
+
+medianet_agg as (
+  SELECT
+    'Medianet API' AS Source,
+    report_date AS Date,
+    'Media.net' AS Partner,
+    CONCAT('Media.net', ';', creative_name) AS Tag_Site,
+    'Open' AS Transaction_type,
+    '' AS Ad_size_initial,
+    size AS Ad_size,
+    'Display' AS Ad_type,
+    'HB' AS Path_type,
+    device_name AS Device_type_initial,
+    'AMP' AS Device_type,
+    country_name AS Country_initial,
+    CASE
+      WHEN country_name = 'United States' THEN 'USA'
+      WHEN country_name = 'N/A' THEN 'Unknown'
+      ELSE 'XUS'
+      END AS Country,
+    '' AS DSP_initial,
+    '' AS Buyer_initial,
+    advertiser_hostname AS Advertiser_initial,
+    '' AS Deal_Id,
+    '' AS Deal_Name,
+    audited_pub_revenue AS Net_Revenue,
+    audited_pub_revenue AS Gross_Revenue,
+    impressions AS Imps,
+    NULL AS active_view_measured_impressions,
+    NULL AS active_view_viewed_impressions,
+    NULL AS Bid_requests,
+    NULL AS Bid_repsonses
+
+  FROM medianet_base
+),
+
+final_union as  (
+  SELECT * FROM  chanelwise_joined
+  UNION ALL
+  SELECT * FROM medianet_agg
+)
+
+SELECT * FROM final_union
+WHERE Date >= '2020-01-01'

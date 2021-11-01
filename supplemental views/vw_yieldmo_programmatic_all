@@ -1,0 +1,117 @@
+## view name: vw_yieldmo_programmatic_all
+## description: adding mapping to yieldmo data for the programamtic all dataset
+## created by: made with love by Andy Bieber andy.bieber@meredith.com
+## Last modified on: 7/15/2021
+## Last modified by: bj.hollowell@meredith.com
+## Change log: 7/15/2021 BJ rewrote the view to use raw data
+
+WITH yieldmo_base AS (
+SELECT * FROM `meredith-switchboard.yieldmo.yieldmo_meredith_allsites_2*`),
+
+tag_mapping AS (
+SELECT * EXCEPT(tag_site), tag_site AS tag_site_map FROM `meredith-switchboard.summary_reports.programmatic_tag_mapping`),
+
+backfill AS (
+  SELECT
+    Source,
+    Date,
+    Partner,
+    Tag_Site,
+    Transaction_type,
+    Ad_size_initial,
+    Ad_size,
+    'NonGam Display' AS Ad_type,
+    'Indirect' AS Path_type,
+    Device_type_initial,
+    Device_type,
+    Country_initial,
+    Country,
+    DSP_initial,
+    Buyer_initial,
+    Advertiser_initial,
+    Deal_Id,
+    Deal_Name,
+    Net_Revenue,
+    Gross_Revenue,
+    Imps,
+    CAST(active_view_measured_impressions AS INT64) AS active_view_measured_impressions,
+    CAST(active_view_viewed_impressions AS INT64) AS active_view_viewed_impressions,
+    CAST(Bid_requests AS INT64) AS Bid_requests,
+    CAST(Bid_repsonses AS INT64) AS Bid_repsonses
+  FROM `meredith-switchboard.yieldmo.yieldmo_meredith_allsites_backfill_data`
+),
+
+yieldmo_agg AS (
+  SELECT
+    'Yieldmo email' AS Source,
+    Date AS Date,
+    'YieldMo' AS Partner,
+    CONCAT('YieldMo', ';', Placement_Description) AS Tag_Site,
+    'Open' AS Transaction_type,
+    '' AS Ad_size_initial,
+    '' AS Ad_size,
+    '' AS Ad_type,
+    '' AS Path_type,
+    '' AS Device_type_initial,
+    '' AS Device_type,
+    '' AS Country_initial,
+    'Unknown' AS Country,
+    '' AS DSP_initial,
+    '' AS Buyer_initial,
+    '' AS Advertiser_initial,
+    '' AS Deal_Id,
+    '' AS Deal_Name,
+    revenue AS Net_Revenue,
+    (revenue / 0.7) AS Gross_Revenue,
+    impressions AS Imps,
+    NULL AS active_view_measured_impressions,
+    NULL AS active_view_viewed_impressions,
+    NULL AS Bid_requests,
+    NULL AS Bid_repsonses
+  FROM yieldmo_base
+),
+
+yieldmo_mapping AS (
+  SELECT
+    Source,
+    Date,
+    Partner,
+    Tag_Site,
+    Transaction_type,
+    Ad_size_initial,
+    map.adsize AS Ad_size,
+    CASE
+      WHEN raw.Tag_Site LIKE '%tier%' THEN 'Display'
+      ELSE 'NonGam Display'
+    END AS Ad_type,
+    CASE
+      WHEN raw.Tag_Site LIKE '%tier%' THEN 'Tag in adserver'
+      ELSE 'Indirect'
+    END AS Path_type,
+    Device_type_initial,
+    map.Device AS Device_type,
+    Country_initial,
+    raw.Country,
+    DSP_initial,
+    Buyer_initial,
+    Advertiser_initial,
+    Deal_Id,
+    Deal_Name,
+    Net_Revenue,
+    Gross_Revenue,
+    Imps,
+    active_view_measured_impressions,
+    active_view_viewed_impressions,
+    Bid_requests,
+    Bid_repsonses
+  FROM
+    yieldmo_agg as raw
+
+  LEFT JOIN
+    tag_mapping as map
+  ON raw.Tag_Site = map.tag_site_map)
+
+
+SELECT * FROM yieldmo_mapping
+UNION ALL
+SELECT * FROM backfill

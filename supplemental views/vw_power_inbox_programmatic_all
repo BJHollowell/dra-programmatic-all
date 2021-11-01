@@ -1,0 +1,127 @@
+## view name: vw_powerinbox_programmatic_all
+## description: adding mapping to powerinbox data for the programamtic all dataset
+## created by: BJ Hollowell
+## Last modified on: 5/14/2021
+## Last modified by: BJ Hollowell
+## Change log: creation
+
+WITH
+power_inbox_dedupe  AS (
+    SELECT * FROM (
+        SELECT
+            _table_suffix AS table_id,
+            date,
+            advertiser,
+            SUM(revenue) AS revenue,
+            SUM(impressions) AS impressions,
+            SUM(total_clicks) AS total_clicks
+        FROM `meredith-switchboard.power_inbox.power_inbox_*`
+        GROUP BY
+            date,
+            advertiser,
+            _table_suffix) t1
+        INNER JOIN (
+            SELECT
+                MAX(_table_suffix) AS max_table_id,
+                date AS max_date
+            FROM `meredith-switchboard.power_inbox.power_inbox_*`
+            GROUP BY date) t2
+        ON t1.date = t2.max_date
+        AND t1.table_id = t2.max_table_id
+),
+base AS (
+    SELECT *, CAST('PowerInbox' AS STRING) AS tag_site
+    FROM power_inbox_dedupe),
+
+tag_mapping AS (
+    SELECT * EXCEPT(tag_site), tag_site AS tag_site_map
+    FROM `meredith-switchboard.summary_reports.programmatic_tag_mapping`),
+
+power_inbox_mapping AS (
+    SELECT
+        CAST('PI Email' AS STRING) AS source,
+        date,
+        CAST('PowerInbox' AS STRING) AS partner,
+        tag_site,
+        CAST('Open' AS STRING) AS transaction_type,
+        --CAST('Unallocated' AS STRING) AS site,
+        --CAST('No Tier' AS STRING) AS tier,
+        CAST(NULL AS STRING) AS ad_size_initial,
+        CAST('Unknown' AS STRING) AS ad_size,
+        CAST('NonGam Display' AS STRING) AS ad_type,
+        CAST('Indirect' AS STRING) AS path_type,
+        CAST(NULL AS STRING) AS device_type_initial,
+        CAST('Unknown' AS STRING) AS device_type,
+        CAST(NULL AS STRING) AS country_initial,
+        CAST('Unknown' AS STRING) AS country,
+        CAST(NULL AS STRING) AS dsp_initial,
+        CAST(NULL AS STRING) AS buyer_initial,
+        advertiser as advertiser_initial,
+        CAST(NULL AS STRING) AS deal_id,
+        CAST(NULL AS STRING) AS deal_name,
+        revenue AS net_revenue,
+        CAST(revenue/0.7 AS FLOAT64) AS gross_revenue,
+        impressions AS imps,
+        CAST(NULL AS INT64) AS bid_requests,
+        CAST(NULL AS INT64) AS bid_responses,
+        CAST(NULL AS INT64) AS active_view_measured_impressions,
+        CAST(NULL AS INT64) AS active_view_viewed_impressions,
+    FROM base AS raw
+    LEFT JOIN tag_mapping AS map
+        ON raw.tag_site = map.tag_site_map
+)
+
+SELECT
+    source,
+    date,
+    partner,
+    tag_site,
+    transaction_type,
+    --site,
+    --tier,
+    ad_size_initial,
+    ad_size,
+    ad_type,
+    path_type,
+    device_type_initial,
+    device_type,
+    country_initial,
+    country,
+    dsp_initial,
+    buyer_initial,
+    advertiser_initial,
+    deal_id,
+    deal_name,
+    sum(net_revenue) as net_revenue,
+    sum(gross_revenue) as gross_revenue,
+    sum(imps) as imps,
+    bid_requests,
+    bid_responses,
+    active_view_measured_impressions,
+    active_view_viewed_impressions
+FROM power_inbox_mapping
+GROUP BY
+    source,
+    date,
+    partner,
+    tag_site,
+    transaction_type,
+    --site,
+    --tier,
+    ad_size_initial,
+    ad_size,
+    ad_type,
+    path_type,
+    device_type_initial,
+    device_type,
+    country_initial,
+    country,
+    dsp_initial,
+    buyer_initial,
+    advertiser_initial,
+    deal_id,
+    deal_name,
+    bid_requests,
+    bid_responses,
+    active_view_measured_impressions,
+    active_view_viewed_impressions

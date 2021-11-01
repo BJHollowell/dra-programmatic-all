@@ -1,0 +1,39 @@
+WITH
+  rubicon_device_type_mapping AS (
+  SELECT
+    A.Source,
+    A.Date,
+    "Magnite" as Partner,
+    A.Tag_Site,
+    A.Transaction_type,
+    A.Ad_size_initial,
+    A.Ad_size,
+    A.Ad_type,
+    A.Path_type,
+    A.Device_type_initial,
+    B.Device as Device_type,
+    A.Country_initial,
+    A.Country,
+    A.DSP_initial,
+    A.Buyer_initial,
+    A.Advertiser_initial,
+    A.Deal_Id,
+    A.Deal_Name,
+    A.Net_Revenue,
+    A.Gross_Revenue,
+    A.Imps,
+    A.active_view_measured_impressions,
+    A.active_view_viewed_impressions,
+    A.Bid_requests,
+    A.Bid_repsonses
+  FROM
+    `meredith-switchboard.programmatic_all.rubicon_*` As A
+  LEFT JOIN
+    `meredith-switchboard.summary_reports.programmatic_tag_mapping` AS B
+  ON
+    A.Tag_Site = B.Tag_Site)
+
+SELECT
+  *
+FROM
+  rubicon_device_type_mapping

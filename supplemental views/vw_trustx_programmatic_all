@@ -1,0 +1,61 @@
+WITH
+  select_unique_trustx AS (
+    SELECT
+      * EXCEPT(table_num,
+        file_count,
+        file_max)
+    FROM (
+      SELECT
+        *,
+        COUNT(DISTINCT(table_num)) OVER (PARTITION BY Date) AS file_count,
+        MAX(table_num) OVER (PARTITION BY Date) AS file_max
+      FROM (
+        SELECT
+          *,
+          _Table_Suffix AS table_num
+        FROM
+          `meredith-switchboard.programmatic_all.trustx_*` ) )
+    WHERE
+      (file_count = 1)
+      OR (file_count > 1
+        AND table_num = file_max) ),
+
+  trustx_programmatic_all AS (
+    SELECT
+      A.Source,
+      A.Date,
+      A.Partner,
+      A.Tag_Site,
+      A.Transaction_type,
+      A.Ad_size_initial,
+      A.Ad_size, Ad_type,
+      A.Path_type,
+      A.Device_type_initial,
+      B.Device AS Device_type,
+      A.Country_initial,
+      A.Country,
+      A.DSP_initial,
+      A.Buyer_initial,
+      A.Advertiser_initital,
+      A.Deal_Id,
+      A.Deal_Name,
+      A.Net_Revenue,
+      A.Gross_Revenue,
+      A.Imps,
+      A.active_view_measured_impressions,
+      A.active_view_viewed_impressions,
+      A.Bid_requests,
+      A.Bid_repsonses
+    FROM
+      select_unique_trustx as A
+    LEFT JOIN
+      `meredith-switchboard.summary_reports.programmatic_tag_mapping` AS B
+    ON
+      A.Tag_Site = B.Tag_Site)
+
+SELECT
+  *
+FROM
+  trustx_programmatic_all
+WHERE
+  Date(Date) >= "2020-01-01"

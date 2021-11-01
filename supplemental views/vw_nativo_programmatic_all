@@ -1,0 +1,28 @@
+WITH
+  select_unique_nativo AS (
+    SELECT
+      * EXCEPT(table_num,
+        file_count,
+        file_max)
+    FROM (
+      SELECT
+        *,
+        COUNT(DISTINCT(table_num)) OVER (PARTITION BY Date) AS file_count,
+        MAX(table_num) OVER (PARTITION BY Date) AS file_max
+      FROM (
+        SELECT
+          *,
+          _Table_Suffix AS table_num
+        FROM
+          `meredith-switchboard.programmatic_all.Nativo_*` ) )
+    WHERE
+      (file_count = 1)
+      OR (file_count > 1
+        AND table_num = file_max) )
+
+SELECT
+  *
+FROM
+  select_unique_nativo
+WHERE
+  Date(Date) >= "2020-01-01"

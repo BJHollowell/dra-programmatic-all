@@ -1,0 +1,39 @@
+## this view was created per the Gross_Revenue instruction/updates in the Market 2.0 g-sheet schema (BJ 6/30/2021)
+
+WITH solve_email_ingest AS (
+SELECT
+    *
+FROM
+    `meredith-switchboard.programmatic_all.Solve_*`
+)
+
+SELECT
+    source,
+    date,
+    partner,
+    tag_site,
+    transaction_type,
+    ad_size_initial,
+    ad_size,
+    ad_type,
+    path_type,
+    device_type_initial,
+    device_type,
+    country_initial,
+    country,
+    dsp_initial,
+    buyer_initial,
+    advertiser_initial,
+    deal_id,
+    deal_name,
+    net_revenue,
+    CASE
+        WHEN (date >= '2021-06-01') THEN (net_revenue / 0.70)
+        ELSE (net_revenue / 0.45)
+    END AS gross_revenue,
+    imps,
+    active_view_measured_impressions,
+    active_view_viewed_impressions,
+    bid_requests,
+    bid_repsonses
+FROM solve_email_ingest

@@ -1,0 +1,164 @@
+WITH
+  GAM_us_tables AS (
+  SELECT
+    A.Source,
+    A.Date,
+    CASE
+      WHEN A.Buyer_initial = "Pubmatic EB" THEN "Pubmatic"
+      WHEN A.BUyer_initial = "Yieldmo" THEN "YieldMo"
+      WHEN A.Buyer_initial = "Verizon Media" THEN "Verizon"
+      WHEN A.Buyer_initial = "Verizon Media - Video" THEN "Verizon"
+      WHEN A.Buyer_initial = "Rubicon" THEN "Magnite"
+    ELSE
+    A.Buyer_initial
+  END
+    AS Partner,
+    A.Tag_Site,
+    A.Transaction_type,
+    A.Ad_Size_initial,
+    A.Ad_Size,
+    A.Ad_type,
+    A.Path_type,
+    A.Device_type_initial,
+    A.Device_type,
+    A.Country_initial,
+    A.Country,
+    A.Buyer_initial as DSP_initial,
+    A.Buyer_initial,
+    A.Advertiser_initial,
+    A.Deal_Id,
+    B.Deal_names AS Deal_Name,
+    A.Net_Revenue,
+    ## the below for Gross_Revenue is added in per Market 2.0 g-sheet schema instruction/updates (BJ 6/30/2021)
+    CASE
+      WHEN A.Path_type = 'OB' AND A.Partner = 'Index' THEN (A.Net_Revenue / 0.95) / 0.85
+      WHEN A.Path_type = 'OB' AND A.Partner = 'Magnite' THEN (A.Net_Revenue / 0.95) / 0.85
+      WHEN A.Path_type = 'OB' AND A.Partner = 'Media.net' THEN (A.Net_Revenue / 0.95) / 1.00
+      WHEN A.Path_type = 'OB' AND A.Partner = 'MobFox' THEN (A.Net_Revenue / 0.95) / 0.85
+      WHEN A.Path_type = 'OB' AND A.Partner = 'OpenX' THEN (A.Net_Revenue / 0.95) / 0.85
+      WHEN A.Path_type = 'OB' AND A.Partner = 'Pubmatic' THEN (A.Net_Revenue / 0.95) / 0.82
+      WHEN A.Path_type = 'OB' AND A.Partner = 'RhythmOne' THEN (A.Net_Revenue / 0.95) / 0.85
+      WHEN A.Path_type = 'OB' AND A.Partner = 'Smaato' THEN (A.Net_Revenue / 0.95) / 1.00
+      WHEN A.Path_type = 'OB' AND A.Partner = 'Smart' THEN (A.Net_Revenue / 0.95) / 0.80
+      WHEN A.Path_type = 'OB' AND A.Partner = 'Sonobi' THEN (A.Net_Revenue / 0.95) / 0.85
+      WHEN A.Path_type = 'OB' AND A.Partner = 'Sovrn' THEN (A.Net_Revenue / 0.95) / 0.85
+      WHEN A.Path_type = 'OB' AND A.Partner = 'Verizon' THEN (A.Net_Revenue / 0.95) / 0.85
+      WHEN A.Path_type = 'OB' AND A.Partner = 'YieldMo' THEN (A.Net_Revenue / 0.95) / 0.70
+      WHEN A.Path_type = 'AdX' AND A.Deal_Id IS NULL THEN A.Net_Revenue / 0.80
+      WHEN A.Path_type = 'AdX' AND A.Deal_Id IS NOT NULL THEN A.Net_Revenue / 0.90
+      ELSE A.Net_Revenue / 0.95
+      END AS Gross_Revenue,
+    A.Imps,
+    A.active_view_measured_impressions,
+    A.active_view_viewed_impressions,
+    A.Bid_requests,
+    A.Bid_repsonses AS Bid_responses
+  FROM
+    `meredith-switchboard.programmatic_all.GAM_ebda_*` AS A
+  LEFT JOIN (
+SELECT * FROM (
+
+SELECT Deal_names, Deal_IDs, Estimated_Revenue, Impressions, _table_suffix as tableID FROM `meredith-switchboard.programmatic_all.adx_deals_mapping_*`
+group by Deal_names, Deal_IDs, Estimated_Revenue, Impressions, _table_suffix
+) mapping
+
+INNER JOIN (
+SELECT Deal_IDs as deal_ids_dedupe, MAX(_table_suffix) as tableID_dedupe FROM `meredith-switchboard.programmatic_all.adx_deals_mapping_*`
+group by Deal_IDs ) as dedupe
+on
+mapping.Deal_IDs = dedupe.deal_ids_dedupe
+AND
+mapping.tableID = dedupe.tableID_dedupe
+  ) AS B
+  ON
+    A.Deal_Id = B.Deal_IDs),
+
+  GAM_xus_tables AS (
+  SELECT
+    A.Source,
+    A.Date,
+    CASE
+      WHEN A.Buyer_initial = "Pubmatic EB" THEN "Pubmatic"
+      WHEN A.Buyer_initial = "Yieldmo" THEN "YieldMo"
+      WHEN A.Buyer_initial = "Verizon Media" THEN "Verizon"
+      WHEN A.Buyer_initial = "Verizon Media - Video" THEN "Verizon"
+      WHEN A.Buyer_initial = "Rubicon" THEN "Magnite"
+    ELSE
+    A.Buyer_initial
+  END
+    AS Partner,
+    A.Tag_Site,
+    A.Transaction_type,
+    A.Ad_Size_initial,
+    A.Ad_Size,
+    A.Ad_type,
+    A.Path_type,
+    A.Device_type_initial,
+    A.Device_type,
+    A.Country_initial,
+    A.Country,
+    A.DSP_initial,
+    A.Buyer_initial,
+    A.Advertiser_initial,
+    A.Deal_Id,
+    B.Deal_names AS Deal_Name,
+    A.Net_Revenue,
+    ## the below for Gross_Revenue is added in per Market 2.0 g-sheet schema instruction/updates (BJ 6/30/2021)
+    CASE
+      WHEN A.Path_type = 'OB' AND A.Partner = 'Index' THEN (A.Net_Revenue / 0.95) / 0.85
+      WHEN A.Path_type = 'OB' AND A.Partner = 'Magnite' THEN (A.Net_Revenue / 0.95) / 0.85
+      WHEN A.Path_type = 'OB' AND A.Partner = 'Media.net' THEN (A.Net_Revenue / 0.95) / 1.00
+      WHEN A.Path_type = 'OB' AND A.Partner = 'MobFox' THEN (A.Net_Revenue / 0.95) / 0.85
+      WHEN A.Path_type = 'OB' AND A.Partner = 'OpenX' THEN (A.Net_Revenue / 0.95) / 0.85
+      WHEN A.Path_type = 'OB' AND A.Partner = 'Pubmatic' THEN (A.Net_Revenue / 0.95) / 0.82
+      WHEN A.Path_type = 'OB' AND A.Partner = 'RhythmOne' THEN (A.Net_Revenue / 0.95) / 0.85
+      WHEN A.Path_type = 'OB' AND A.Partner = 'Smaato' THEN (A.Net_Revenue / 0.95) / 1.00
+      WHEN A.Path_type = 'OB' AND A.Partner = 'Smart' THEN (A.Net_Revenue / 0.95) / 0.80
+      WHEN A.Path_type = 'OB' AND A.Partner = 'Sonobi' THEN (A.Net_Revenue / 0.95) / 0.85
+      WHEN A.Path_type = 'OB' AND A.Partner = 'Sovrn' THEN (A.Net_Revenue / 0.95) / 0.85
+      WHEN A.Path_type = 'OB' AND A.Partner = 'Verizon' THEN (A.Net_Revenue / 0.95) / 0.85
+      WHEN A.Path_type = 'OB' AND A.Partner = 'YieldMo' THEN (A.Net_Revenue / 0.95) / 0.70
+      WHEN A.Path_type = 'AdX' AND A.Deal_Id IS NULL THEN A.Net_Revenue / 0.80
+      WHEN A.Path_type = 'AdX' AND A.Deal_Id IS NOT NULL THEN A.Net_Revenue / 0.90
+      ELSE A.Net_Revenue / 0.95
+      END AS Gross_Revenue,
+    A.Imps,
+    A.active_view_measured_impressions,
+    A.active_view_viewed_impressions,
+    A.Bid_requests,
+    A.Bid_repsonses AS Bid_responses
+  FROM
+    `meredith-switchboard.programmatic_all.GAM_xus_*` AS A
+  LEFT JOIN (
+SELECT * FROM (
+
+SELECT Deal_names, Deal_IDs, Estimated_Revenue, Impressions, _table_suffix as tableID FROM `meredith-switchboard.programmatic_all.adx_deals_mapping_*`
+group by Deal_names, Deal_IDs, Estimated_Revenue, Impressions, _table_suffix
+) mapping
+
+INNER JOIN (
+SELECT Deal_IDs as deal_ids_dedupe, MAX(_table_suffix) as tableID_dedupe FROM `meredith-switchboard.programmatic_all.adx_deals_mapping_*`
+group by Deal_IDs ) as dedupe
+on
+mapping.Deal_IDs = dedupe.deal_ids_dedupe
+AND
+mapping.tableID = dedupe.tableID_dedupe
+  ) AS B
+  ON
+    A.Deal_Id = B.Deal_IDs),
+
+  GAM_tables AS (
+  SELECT
+    *
+  FROM
+    GAM_us_tables
+  UNION ALL
+  SELECT
+    *
+  FROM
+    GAM_xus_tables)
+
+SELECT
+  *
+FROM
+  GAM_tables

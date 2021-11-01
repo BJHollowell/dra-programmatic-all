@@ -1,0 +1,125 @@
+With Base as
+(SELECT *,
+Concat('TripleLift',';',Publisher_name,';',Placement_name,';',supply_source) as tag_site
+-- Partner + ";" publisher_name + ";" + placement_name + ";" + supply source
+
+FROM `meredith-switchboard.triplelift.triplelift_api_*` ),
+
+Tag_mapping as (SELECT * except(tag_site), tag_site as tag_site_map FROM `meredith-switchboard.summary_reports.programmatic_tag_mapping`),
+
+Triplelift_mapping as (
+
+SELECT
+    Cast('TripleLift API' as string) as source,
+    report_date as Date,
+    Cast('TripleLift' as string) as partner,
+    tag_site,
+    site,
+    Cast ('Unknown' as string) as tier,
+    Case
+    When Deal_Name = '%N/A%' or deal_name = ' ' or deal_name is null then 'Open'
+    else 'PMP'
+   End as Transaction_type,
+    Cast(' ' as string) as Ad_size_initial,
+    map.adsize AS Ad_size,
+-- if placement name contains 'Meredith_video'' then 'Video'; if placement name contains 'android' then 'App'; if 'supply_source'' ="Direct" then ""NonGam Display""; if not them "Display"
+    CASE
+      WHEN placement_name like '%Meredith_video%' then 'Video'
+      WHEN placement_name like '%android%' or placement_name like '%Android%'  then 'App'
+      WHEN supply_source like '%Direct%' then "NonGam Display"
+      else "Display"
+    END AS Ad_type,
+    CASE
+      WHEN supply_source like '%Direct%' then 'Selectable Tag'
+      else "TAM"
+    END AS Path_type,
+    CASE
+     WHEN Device_type = 'Desktop' or device_type = 'Tablet' then 'Desktop'
+      WHEN Device_type  = 'Phone' then 'MobileWeb'
+      else 'Unknown'
+    End as Device_type,
+    Country_name as Country_initial,
+  -- if 'country_name' = "United States" then "USA"; if 'Country' = "N/A" then "Unknown"; if 'Country' is NOT "United States" OR "N/A" then "XUS"
+    CASE
+      WHEN country_name like '%United States%' then 'USA'
+      WHEN Country_name is null then 'Unknown'
+     When country_name not like '%United States%' and  country_name is not null then 'XUS'
+    End as Country,
+    device_type as Device_Type_initial,
+    buyer_member as DSP_initial,
+    Cast('' as string) as Buyer_initial,
+    brand as Advertiser_initial,
+    deal_code as Deal_Id,
+    deal_name as Deal_Name,
+    revenue as Net_Revenue,
+    revenue as Gross_Revenue,
+    rendered as Imps,
+    Cast(null as int64) as active_view_measured_impressions,
+    Cast(null as int64) as active_view_viewed_impressions,
+    Cast(null as int64) as Bid_requests,
+    Cast(null as int64) as Bid_responses
+
+ FROM
+     Base as raw
+
+
+
+  LEFT JOIN
+    tag_mapping as map
+ON
+    raw.tag_site = map.tag_site_map)
+
+
+    SELECT
+    source,
+    date,
+    Partner,
+    tag_site,
+    Transaction_type,
+    Ad_size_initial,
+    Ad_size,
+    Ad_type,
+    Path_type,
+    Device_type_initial,
+    Device_type,
+    Country_initial,
+    Country,
+    DSP_initial,
+    Buyer_initial,
+    Advertiser_initial,
+    Deal_Id,
+    Deal_Name,
+    sum(Net_Revenue) as Net_Revenue,
+    sum(Gross_Revenue) as Gross_Revenue,
+    sum(imps) as imps,
+    active_view_measured_impressions,
+    active_view_viewed_impressions,
+    Bid_requests,
+    Bid_responses
+
+    FROM Triplelift_mapping
+
+    group by
+
+    source,
+    date,
+    Partner,
+    tag_site,
+    Transaction_type,
+    Ad_size_initial,
+    Ad_size,
+    Ad_type,
+    Path_type,
+    Device_type,
+    Device_type_initial,
+    Country_initial,
+    Country,
+    DSP_initial,
+    Buyer_initial,
+    Advertiser_initial,
+    Deal_Id,
+    Deal_Name,
+    active_view_measured_impressions,
+    active_view_viewed_impressions,
+    Bid_requests,
+    Bid_responses
