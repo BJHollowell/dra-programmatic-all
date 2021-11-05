@@ -394,3 +394,4 @@ GROUP BY
 
 SELECT *
 FROM programmatic_all_tag_site_final
+ORDER BY Net_Revenue desc
