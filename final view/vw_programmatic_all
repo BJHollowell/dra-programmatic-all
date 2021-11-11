@@ -1,3 +1,13 @@
+## view name: vw_programmatic_all
+## description: aggregated SSP data, showing programmatic delivery and impressions
+## created by: BJ Hollowell bj.hollowell@meredith.com
+## Last modified on: 11/11/2021
+## Last modified by: andy.bieber@meredith.com
+## Change log: 11/11/2021 BJ aggregated data
+##
+## notes:
+##
+##
 WITH
   AdX_programmatic_all_untagged AS(
   SELECT
@@ -465,7 +475,7 @@ WITH
     A.Advertiser = B.top_parent_account),
 
   --adding fiscal year, fiscal year-to-date indicators, holidays and holiday periods
-  programmatic_all_final AS(
+  programmatic_all_calendar AS(
   SELECT *,
     CASE WHEN (EXTRACT(DAYOFYEAR FROM date) <= EXTRACT(DAYOFYEAR FROM CURRENT_DATE()) AND EXTRACT(MONTH FROM date) < 07) THEN EXTRACT(YEAR FROM date)
         WHEN (EXTRACT(MONTH FROM date) > 06 AND EXTRACT(YEAR FROM CURRENT_DATE()) > EXTRACT(YEAR FROM date)) THEN EXTRACT(YEAR FROM date)+1
@@ -483,9 +493,76 @@ WITH
       period
     FROM `meredith-switchboard.digital_ads_maps.mdp_calendar`) c
     ON pam.date = c.CALENDAR_DATE
-  )
+  ),
 
+programmatic_all_final AS (
 SELECT
-  *
-FROM
-  programmatic_all_final
+    Source,
+    Date,
+    Partner,
+    Transaction_type,
+    Site,
+    Tier,
+    Ad_Size,
+    Ad_type,
+    Path_type,
+    Device_type_initial,
+    Device_type,
+    Country,
+    Advertiser_initial,
+    Deal_Id,
+    Deal_Name,
+    Advertiser,
+    Buyer,
+    DSP,
+    HoldCo,
+    Agency,
+    Vertical,
+    calendar_date,
+    fiscal_quarter,
+    fiscal_year,
+    holiday,
+    period,
+    fiscal_ytd,
+    fiscal_ytd_date,
+    SUM(Net_Revenue) AS Net_Revenue,
+    SUM(Gross_Revenue) AS Gross_Revenue,
+    SUM(Imps) AS Imps,
+    SUM(active_view_measured_impressions) AS active_view_measured_impressions,
+    SUM(active_view_viewed_impressions) AS active_view_viewed_impressions,
+    SUM(Bid_requests) AS Bid_requests,
+    SUM(Bid_responses) AS Bid_responses
+FROM programmatic_all_calendar
+GROUP BY
+    Source,
+    Date,
+    Partner,
+    Transaction_type,
+    Site,
+    Tier,
+    Ad_Size,
+    Ad_type,
+    Path_type,
+    Device_type_initial,
+    Device_type,
+    Country,
+    Advertiser_initial,
+    Deal_Id,
+    Deal_Name,
+    Advertiser,
+    Buyer,
+    DSP,
+    HoldCo,
+    Agency,
+    Vertical,
+    calendar_date,
+    fiscal_quarter,
+    fiscal_year,
+    holiday,
+    period,
+    fiscal_ytd,
+    fiscal_ytd_date
+)
+
+SELECT *
+FROM programmatic_all_final
