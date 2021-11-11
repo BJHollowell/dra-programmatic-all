@@ -1,13 +1,3 @@
-## view name: vw_programmatic_all
-## description: aggregated SSP data, showing programmatic delivery and impressions
-## created by: BJ Hollowell bj.hollowell@meredith.com
-## Last modified on: 11/11/2021
-## Last modified by: andy.bieber@meredith.com
-## Change log: 11/11/2021 BJ aggregated data
-##
-## notes:
-##
-##
 WITH
   AdX_programmatic_all_untagged AS(
   SELECT
@@ -36,10 +26,10 @@ WITH
     DATE(A.Date) AS Date,
     A.Partner,
     A.Tag_Site,
-    A.Transaction_type,
+  --  A.Transaction_type,
     B.Site,
     B.Tier,
-    A.Ad_Size_initial,
+/*    A.Ad_Size_initial,
     CASE
       WHEN A.Ad_Size_initial = "390x50" THEN "320x50"
       WHEN A.Ad_Size_initial = "375x48" THEN "320x50"
@@ -135,46 +125,22 @@ WITH
     A.Buyer_initial,
     A.Advertiser_initial,
     A.Deal_Id,
-    A.Deal_Name,
+    A.Deal_Name,      */
     A.Net_Revenue,
-    A.Gross_Revenue,
+   /* A.Gross_Revenue,
     CAST(A.Imps AS INT64) AS Imps,
     A.active_view_measured_impressions,
     A.active_view_viewed_impressions,
     A.Bid_requests,
-    A.Bid_responses,
-    case when E.parent_company is null then A.Advertiser_initial
-    else E.parent_company
-    End as Advertiser,
-    C.Buyer,
-    D.DSP,
-    C.Holdco AS HoldCo,
-    C.Agency
+    A.Bid_responses,        */
   FROM
     AdX_programmatic_all_untagged AS A
   LEFT JOIN
     `meredith-switchboard.summary_reports.programmatic_tag_mapping` AS B
   ON
     A.Tag_Site = B.Tag_Site
-  LEFT JOIN
-    `meredith-switchboard.programmatic_all.Buyer_mapping_table` AS C
-  ON
-    A.Buyer_initial = C.Buyer_initial
-  LEFT JOIN
-    `meredith-switchboard.programmatic_all.DSP_mapping_table` AS D
-  ON
-    A.DSP_initial = D.DSP_initial
-  LEFT JOIN (
-      SELECT
-        advertiser_from_source,
-        parent_company
-      FROM
-        `meredith-switchboard.digital_ads_maps.master_advertiser_map`
-      GROUP BY
-        advertiser_from_source,
-        parent_company ) as E
-    ON UPPER(A.Advertiser_initial) = UPPER(E.advertiser_from_source)
-    ),
+  ),
+
   programmatic_all_untagged AS(
   SELECT
     *
@@ -318,7 +284,7 @@ WITH
     DATE(A.Date) AS Date,
     A.Partner,
     A.Tag_Site,
-    A.Transaction_type,
+  --  A.Transaction_type,
     B.Site,
     CASE
       WHEN Source = "Outbrain API" THEN "NoTier"
@@ -332,7 +298,7 @@ WITH
       B.Tier
     END
       AS Tier,
-    A.Ad_Size_initial,
+  /*  A.Ad_Size_initial,
     A.Ad_Size,
     A.Ad_type,
     A.Path_type,
@@ -344,46 +310,21 @@ WITH
     A.Buyer_initial,
     A.Advertiser_initial,
     A.Deal_Id,
-    A.Deal_Name,
+    A.Deal_Name,        */
     A.Net_Revenue,
-    A.Gross_Revenue,
+/*    A.Gross_Revenue,
     CAST(A.Imps AS INT64) AS Imps,
     A.active_view_measured_impressions,
     A.active_view_viewed_impressions,
     A.Bid_requests,
-    A.Bid_responses,
-    Case when E.parent_company is null then A.Advertiser_initial
-    else E.parent_company
-    end as Advertiser,
-    C.Buyer,
-    D.DSP,
-    C.Holdco AS HoldCo,
-    C.Agency
+    A.Bid_responses,      */
   FROM
     programmatic_all_untagged AS A
   LEFT JOIN
     `meredith-switchboard.summary_reports.programmatic_tag_mapping` AS B
   ON
     A.Tag_Site = B.Tag_Site
-  LEFT JOIN
-    `meredith-switchboard.programmatic_all.Buyer_mapping_table` AS C
-  ON
-    A.Buyer_initial = C.Buyer_initial
-  LEFT JOIN
-    `meredith-switchboard.programmatic_all.DSP_mapping_table` AS D
-  ON
-    A.DSP_initial = D.DSP_initial
-  LEFT JOIN (
-      SELECT
-        advertiser_from_source,
-        parent_company
-      FROM
-        `meredith-switchboard.digital_ads_maps.master_advertiser_map`
-      GROUP BY
-        advertiser_from_source,
-        parent_company ) as E
-    ON UPPER(A.Advertiser_initial) = UPPER(E.advertiser_from_source)
-    ),
+),
 
   Pacific_prog_all AS (
     SELECT
@@ -391,10 +332,10 @@ WITH
       DATE(A.Date) AS Date,
       A.Partner,
       A.Tag_Site,
-      A.Transaction_type,
+    --  A.Transaction_type,
       A.Site,
       A.Tier,
-      A.Ad_Size_initial,
+  /*    A.Ad_Size_initial,
       A.Ad_Size,
       A.Ad_type,
       A.Path_type,
@@ -406,36 +347,17 @@ WITH
       A.Buyer_initial,
       A.Advertiser_initial,
       A.Deal_Id,
-      A.Deal_Name,
+      A.Deal_Name,    */
       A.Net_Revenue,
-      A.Gross_Revenue,
+/*      A.Gross_Revenue,
       CAST(A.Imps AS INT64) AS Imps,
       A.active_view_measured_impressions,
       A.active_view_viewed_impressions,
       A.Bid_requests,
-      A.Bid_repsonses AS Bid_responses,
-      Case when D.parent_company is null then A.Advertiser_initial
-      else D.parent_company
-      end as Advertiser,
-      B.Buyer,
-      C.DSP,
-      B.Holdco AS HoldCo,
-      B.Agency
+      A.Bid_repsonses AS Bid_responses,   */
     FROM
       `meredith-switchboard.programmatic_all.Pacific`  AS A
-  LEFT JOIN
-    `meredith-switchboard.programmatic_all.Buyer_mapping_table` AS B
-  ON
-    A.Buyer_initial = B.Buyer_initial
-  LEFT JOIN
-    `meredith-switchboard.programmatic_all.DSP_mapping_table` AS C
-  ON
-    A.DSP_initial = C.DSP_initial
-  LEFT JOIN
-    `meredith-switchboard.digital_ads_maps.master_advertiser_map` AS D
-  ON
-    A.Advertiser_initial = D.advertiser_from_source
-    ),
+),
 
   programmatic_all AS(
   SELECT
@@ -453,116 +375,23 @@ WITH
   FROM
     Pacific_prog_all),
 
-  Vertical_mapping_table AS(
-  SELECT
-    top_parent_account,
-    parent_account_revised_industry
-  FROM
-    `meredith-switchboard.digital_ads_maps.meredith_vertical_helper`
-  GROUP BY
-    top_parent_account,
-    parent_account_revised_industry),
 
-  programmatic_all_mapped AS(
-  SELECT
-    A.*,
-    B.parent_account_revised_industry as Vertical
-  FROM
-    programmatic_all as A
-  LEFT JOIN
-    Vertical_mapping_table AS B
-  ON
-    A.Advertiser = B.top_parent_account),
-
-  --adding fiscal year, fiscal year-to-date indicators, holidays and holiday periods
-  programmatic_all_calendar AS(
-  SELECT *,
-    CASE WHEN (EXTRACT(DAYOFYEAR FROM date) <= EXTRACT(DAYOFYEAR FROM CURRENT_DATE()) AND EXTRACT(MONTH FROM date) < 07) THEN EXTRACT(YEAR FROM date)
-        WHEN (EXTRACT(MONTH FROM date) > 06 AND EXTRACT(YEAR FROM CURRENT_DATE()) > EXTRACT(YEAR FROM date)) THEN EXTRACT(YEAR FROM date)+1
-        ELSE NULL END AS fiscal_ytd,
-    CASE WHEN (EXTRACT(DAYOFYEAR FROM date) <= EXTRACT(DAYOFYEAR FROM CURRENT_DATE()) AND EXTRACT(MONTH FROM date) < 07) THEN date
-        WHEN (EXTRACT(MONTH FROM date) > 06 AND EXTRACT(YEAR FROM CURRENT_DATE()) > EXTRACT(YEAR FROM date)) THEN date
-        ELSE NULL END AS fiscal_ytd_date
-  FROM programmatic_all_mapped pam
-  LEFT JOIN (
-    SELECT
-      calendar_date,
-      fiscal_quarter,
-      fiscal_year,
-      holiday,
-      period
-    FROM `meredith-switchboard.digital_ads_maps.mdp_calendar`) c
-    ON pam.date = c.CALENDAR_DATE
-  ),
-
-programmatic_all_final AS (
+programmatic_all_tag_site_final AS (
 SELECT
-    Source,
-    Date,
-    Partner,
-    Transaction_type,
-    Site,
-    Tier,
-    Ad_Size,
-    Ad_type,
-    Path_type,
-    Device_type_initial,
-    Device_type,
-    Country,
-    Advertiser_initial,
-    Deal_Id,
-    Deal_Name,
-    Advertiser,
-    Buyer,
-    DSP,
-    HoldCo,
-    Agency,
-    Vertical,
-    calendar_date,
-    fiscal_quarter,
-    fiscal_year,
-    holiday,
-    period,
-    fiscal_ytd,
-    fiscal_ytd_date,
-    SUM(Net_Revenue) AS Net_Revenue,
-    SUM(Gross_Revenue) AS Gross_Revenue,
-    SUM(Imps) AS Imps,
-    SUM(active_view_measured_impressions) AS active_view_measured_impressions,
-    SUM(active_view_viewed_impressions) AS active_view_viewed_impressions,
-    SUM(Bid_requests) AS Bid_requests,
-    SUM(Bid_responses) AS Bid_responses
-FROM programmatic_all_calendar
+  Tag_Site,
+  Partner,
+  Source,
+  SUM(Net_Revenue) AS Net_Revenue,
+  MIN(date) AS min_date,
+  MAX(date) AS max_date
+FROM programmatic_all
+WHERE site IS NULL AND tier IS NULL
 GROUP BY
-    Source,
-    Date,
-    Partner,
-    Transaction_type,
-    Site,
-    Tier,
-    Ad_Size,
-    Ad_type,
-    Path_type,
-    Device_type_initial,
-    Device_type,
-    Country,
-    Advertiser_initial,
-    Deal_Id,
-    Deal_Name,
-    Advertiser,
-    Buyer,
-    DSP,
-    HoldCo,
-    Agency,
-    Vertical,
-    calendar_date,
-    fiscal_quarter,
-    fiscal_year,
-    holiday,
-    period,
-    fiscal_ytd,
-    fiscal_ytd_date
+  Tag_Site,
+  Partner,
+  Source
 )
 
 SELECT *
-FROM programmatic_all_final
+FROM programmatic_all_tag_site_final
+ORDER BY Net_Revenue desc
