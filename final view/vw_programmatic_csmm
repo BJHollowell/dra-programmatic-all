@@ -1,0 +1,41 @@
+## view name: vw_programmatic_csmm
+## description: aggregated SSP data, showing programmatic delivery and impressions
+## created by: JJ Vanni jj.vanni@meredith.com
+## Last modified on: 11/11/2021
+## Last modified by: andy.bieber@meredith.com
+## Change log: 11/11/2021 JJ built view
+##
+## notes:
+##
+##
+WITH
+
+programmatic_csmm_map AS (
+  SELECT
+    deal_name AS deal_name_map,
+    deal_id AS deal_id_map,
+    csm AS csmm,
+    csmm_holdco,
+    csmm_advertiser
+  FROM
+    `meredith-switchboard.programmatic_dashboard.programmatic_csmm_map`
+),
+
+programmatic_all AS (
+    SELECT
+      *
+    FROM
+        `meredith-switchboard.programmatic_all.tbl_programmatic_all_pmp`
+),
+
+join_step AS (
+    SELECT
+        * EXCEPT (deal_id_map, deal_name_map)
+    FROM programmatic_all AS a
+    INNER JOIN programmatic_csmm_map AS m
+        ON a.Deal_Id = m.deal_id_map
+)
+
+
+
+SELECT * FROM join_step;
