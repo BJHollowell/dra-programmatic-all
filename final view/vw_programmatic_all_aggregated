@@ -1,3 +1,13 @@
+## view name: vw_programmatic_all
+## description: aggregated SSP data, showing programmatic delivery and impressions
+## created by: BJ Hollowell bj.hollowell@meredith.com
+## Last modified on: 11/11/2021
+## Last modified by: andy.bieber@meredith.com
+## Change log: 11/11/2021 BJ aggregated data
+##
+## notes:
+##
+##
 WITH
   AdX_programmatic_all_untagged AS(
   SELECT
