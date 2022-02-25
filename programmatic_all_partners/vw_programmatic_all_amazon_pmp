@@ -1,0 +1,82 @@
+## view name: vw_programmatic_all_amazon_pmp
+## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
+## created by: bj.hollowell@meredith.com
+## Last modified on:
+## Last modified by:
+## Change log:
+##
+##
+## notes:
+##
+
+WITH
+
+amazon_pmp_base AS (
+    SELECT *
+    FROM `meredith-switchboard.amazon.deals_health_*`
+    WHERE date >= '2020-01-01'
+),
+
+amazon_pmp_cleaned AS (
+    SELECT
+        'Amazon Deals Email' AS source,
+        CAST(date AS TIMESTAMP) AS date,
+        'A9' AS partner,
+        CONCAT('A9', ';', site, ';', ad_slot) AS tag_site,
+        'PMP' AS transaction_type,
+        --'' AS site,
+        --'' AS tier,
+        size AS ad_size_initial,
+        CASE
+            WHEN size LIKE '300x250'      THEN '300x250'
+            WHEN size LIKE '320x50'       THEN '320x50'
+            WHEN size LIKE '728x90'       THEN '728x90'
+            WHEN size LIKE '300x600'      THEN '300x600'
+            WHEN size LIKE '970x250'      THEN '970x250'
+            WHEN size LIKE '300x1050'     THEN '300x1050'
+            WHEN size LIKE '970x90'       THEN '970x90'
+            WHEN size LIKE '%preroll%'    THEN 'Video/Overlay'
+            WHEN ad_slot LIKE '%preroll%' THEN 'Video/Overlay'
+            ELSE 'Other'
+            END AS ad_size,
+        media_type AS ad_type,
+        'HB' AS path_type,
+        CASE
+            WHEN ad_slot LIKE '%.amp%'       THEN 'AMP'
+            WHEN ad_slot LIKE '%.AMP%'       THEN 'AMP'
+            WHEN device_type LIKE '%Phone%'  THEN 'MobileWeb'
+            WHEN device_type LIKE '%phone%'  THEN 'MobileWeb'
+            WHEN device_type LIKE '%PC%'     THEN 'Desktop'
+            WHEN device_type LIKE '%Tablet%' THEN 'Desktop'
+            WHEN device_type LIKE '%TV%'     THEN 'Connected TV'
+            ELSE device_type
+            END AS device_type_initial,
+        CASE
+            WHEN device_type LIKE 'Phone'  THEN 'MobileWeb'
+            WHEN device_type LIKE 'PC'     THEN 'Desktop'
+            WHEN device_type LIKE 'Tablet' THEN 'Desktop'
+            WHEN device_type LIKE 'TV'     THEN 'Connected TV'
+            ELSE 'Unknown'
+            END AS device_type,
+        country AS country_initial,
+        CASE
+            WHEN country LIKE 'US' THEN 'USA'
+            ELSE 'XUS'
+            END AS country,
+        'Unknown' AS dsp_initial,
+        buyer AS buyer_initial,
+        '' AS advertiser_initial,
+        'Unknown' AS deal_id,
+        deal AS deal_name,
+        earnings AS net_revenue,
+        earnings AS gross_revenue,
+        impressions AS imps,
+        NULL AS active_view_measured_impressions,
+        NULL AS active_view_viewed_impressions,
+        qualified_requests AS bid_requests,
+        bids_submitted AS bid_responses
+    FROM amazon_pmp_base
+    WHERE impressions <> 0
+)
+
+SELECT * FROM amazon_pmp_cleaned

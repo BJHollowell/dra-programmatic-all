@@ -1,0 +1,194 @@
+## view name: vw_programmatic_all_trustx
+## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
+## created by: bj.hollowell@meredith.com
+## Last modified on:
+## Last modified by: andy.bieber@meredith.com
+## Change log: 2/11/2022 Andy added creative size case statement to the old reporting flow
+##
+##
+## notes:
+##
+
+WITH
+
+prog_tag_map AS (
+    SELECT
+        * EXCEPT(tag_site),
+        tag_site AS tag_site_map
+    FROM `meredith-switchboard.summary_reports.programmatic_tag_mapping`
+),
+
+trustx_base_old AS (
+    SELECT
+        *,
+        _table_suffix AS table_num
+    FROM `meredith-switchboard.trustx.trustx_2*`
+    WHERE day >= '2020-01-01'
+),
+
+trustx_base_new AS (
+    SELECT
+        *,
+        _table_suffix AS table_num
+    FROM `meredith-switchboard.trustx.trustx_v2_*`
+),
+
+trustx_cleaned_old AS (
+    SELECT
+        table_num,
+        'TrustX Email' AS source,
+        CAST(day AS TIMESTAMP) AS date,
+        'TrustX' AS partner,
+        CONCAT('TrustX', ';', ad_unit_name) AS tag_site,
+        'Open' AS transaction_type,
+        --'' AS site,
+        --'' AS tier,
+        creative_size AS ad_size_initial,
+        CASE
+            WHEN CREATIVE_SIZE = '300x250'  THEN CREATIVE_SIZE
+            WHEN CREATIVE_SIZE = '320x50'   THEN CREATIVE_SIZE
+            WHEN CREATIVE_SIZE = '728x90'   THEN CREATIVE_SIZE
+            WHEN CREATIVE_SIZE = '300x600'  THEN CREATIVE_SIZE
+            WHEN CREATIVE_SIZE = '300x1050' THEN CREATIVE_SIZE
+            WHEN CREATIVE_SIZE = '970x250'  THEN CREATIVE_SIZE
+            WHEN CREATIVE_SIZE = '640x360'  THEN 'Video/Overlay'
+            ELSE 'Other'
+         END AS ad_size,
+        'Display' AS ad_type,
+        'HB' AS path_type,
+        '' AS device_type_initial,
+        '' AS device_type,
+        country AS country_initial,
+        CASE
+            WHEN country = 'US' THEN 'USA'
+            WHEN country = 'unknown' THEN 'Unknown'
+            WHEN country = 'Unknown' THEN 'Unknown'
+            ELSE 'XUS'
+            END AS country,
+        dsp_name AS dsp_initial,
+        buyer_id_name AS buyer_initial,
+        landing_page_domain AS advertiser_initial,
+        'Open' AS deal_id,
+        'Open' AS deal_name,
+        pub_payout AS net_revenue,
+        (pub_payout / 0.875) AS gross_revenue,
+        imps AS imps,
+        NULL AS active_view_measured_impressions,
+        NULL AS active_view_viewed_impressions,
+        NULL AS bid_requests,
+        NULL AS bid_responses
+    FROM trustx_base_old
+),
+
+trustx_cleaned_new AS (
+    SELECT
+        table_num,
+        'TrustX Email' AS source,
+        CAST(date AS TIMESTAMP) AS date,
+        'TrustX' AS partner,
+        CONCAT('TrustX', ';', AD_UNIT_NAME) AS tag_site,
+        CASE
+            WHEN DEAL_ID = '0' THEN 'Open'
+            ELSE 'PMP'
+            END AS transaction_type,
+        --'' AS site,
+        --'' AS tier,
+        CREATIVE_SIZE AS ad_size_initial,
+        CASE
+            WHEN CREATIVE_SIZE = '300x250'  THEN CREATIVE_SIZE
+            WHEN CREATIVE_SIZE = '320x50'   THEN CREATIVE_SIZE
+            WHEN CREATIVE_SIZE = '728x90'   THEN CREATIVE_SIZE
+            WHEN CREATIVE_SIZE = '300x600'  THEN CREATIVE_SIZE
+            WHEN CREATIVE_SIZE = '300x1050' THEN CREATIVE_SIZE
+            WHEN CREATIVE_SIZE = '970x250'  THEN CREATIVE_SIZE
+            WHEN CREATIVE_SIZE = '640x360'  THEN 'Video/Overlay'
+            ELSE 'Other'
+            END AS ad_size,
+        CASE
+            WHEN CREATIVE_SIZE = '640x360' THEN 'Video'
+            ELSE 'Display'
+            END AS ad_type,
+        'HB' AS path_type,
+        '' AS device_type_initial,
+        '' AS device_type,
+        '' AS country_initial,
+        'Unknown' AS country,
+        DSP_NAME AS dsp_initial,
+        BUYER_NAME AS buyer_initial,
+        LANDING_PAGE AS advertiser_initial,
+        CASE
+            WHEN DEAL_ID = '0' THEN 'Open'
+            ELSE DEAL_ID
+            END AS deal_id,
+        CASE
+            WHEN DEAL_NAME = '0' THEN 'Open'
+            ELSE DEAL_NAME
+            END AS deal_name,
+        CASE
+            WHEN DSP_NAME = 'GRID' THEN (adv_payout_billable * 0.92)
+            ELSE (adv_payout_billable * 0.875)
+            END AS net_revenue,
+        adv_payout_billable AS gross_revenue,
+        billable_events AS imps,
+        NULL AS active_view_measured_impressions,
+        NULL AS active_view_viewed_impressions,
+        (yes_bids + no_bids) AS bid_requests,
+        yes_bids AS bid_responses
+    FROM trustx_base_new
+),
+
+trustx_unioned AS (
+    SELECT * FROM trustx_cleaned_new
+    UNION ALL
+    SELECT * FROM trustx_cleaned_old
+),
+
+trustx_deduped AS (
+    SELECT
+        * EXCEPT(table_num, file_count, file_max)
+    FROM (
+        SELECT
+            *,
+            COUNT(DISTINCT(table_num)) OVER (PARTITION BY Date) AS file_count,
+            MAX(table_num) OVER (PARTITION BY Date) AS file_max
+        FROM trustx_unioned
+    )
+    WHERE (file_count = 1) OR (file_count > 1 AND table_num = file_max)
+),
+
+trustx_mapped AS (
+    SELECT
+        A.source,
+        A.date,
+        A.partner,
+        A.tag_site,
+        A.transaction_type,
+        --A.site,
+        --A.tier,
+        A.ad_size_initial,
+        A.ad_size,
+        A.ad_type,
+        A.path_type,
+        A.device_type_initial,
+        B.device AS device_type,
+        A.country_initial,
+        A.country,
+        A.dsp_initial,
+        A.buyer_initial,
+        A.advertiser_initial,
+        A.deal_id,
+        A.deal_name,
+        A.net_revenue,
+        A.gross_revenue,
+        A.imps,
+        A.active_view_measured_impressions,
+        A.active_view_viewed_impressions,
+        A.bid_requests,
+        A.bid_responses
+    FROM trustx_deduped AS A
+
+    LEFT JOIN prog_tag_map AS B
+    ON A.tag_site = B.tag_site_map
+)
+
+SELECT * FROM trustx_mapped

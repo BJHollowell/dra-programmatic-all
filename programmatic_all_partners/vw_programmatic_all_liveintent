@@ -1,0 +1,101 @@
+## view name: vw_programmatic_all_liveintent
+## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
+## created by: bj.hollowell@meredith.com
+## Last modified on:
+## Last modified by:
+## Change log:
+##
+##
+## notes:
+##
+
+WITH
+
+prog_tag_map AS (
+    SELECT
+        * EXCEPT(tag_site),
+        tag_site AS tag_site_map
+    FROM `meredith-switchboard.summary_reports.programmatic_tag_mapping`
+),
+
+liveintent_base AS (
+    SELECT *
+    FROM `meredith-switchboard.liveintent.liveintent_2*`
+    WHERE timestamp >= '2020-01-01'
+),
+
+liveintent_cleaned AS (
+    SELECT
+        'LiveIntent API' AS source,
+        CAST(timestamp AS TIMESTAMP) AS date,
+        'LiveIntent' AS partner,
+        CONCAT('LiveIntent', ';', Publisher, ';', Section) AS tag_site,
+        'Open' AS transaction_type,
+        --'' AS site,
+        --'' AS tier,
+        '' AS ad_size_initial,
+        '' AS ad_size,
+        'Email' AS ad_type,
+        'Email tag' AS path_type,
+        '' AS device_type_initial,
+        'Email' AS device_type,
+        '' AS country_initial,
+        'Unknown' AS country,
+        '' AS dsp_initial,
+        '' AS buyer_initial,
+        Advertiser_Domain AS advertiser_initial,
+        '' AS deal_id,
+        '' AS deal_name,
+        Publisher_Revenue AS net_revenue,
+        CASE
+            WHEN timestamp <= '2020-10-19' THEN (Publisher_Revenue / 0.80)
+            ELSE (Publisher_Revenue / 0.825)
+            END AS gross_revenue,
+        Impressions AS imps,
+        NULL AS active_view_measured_impressions,
+        NULL AS active_view_viewed_impressions,
+        NULL AS bid_requests,
+        NULL AS bid_responses
+    FROM liveintent_base
+    WHERE
+        Publisher NOT LIKE '%(Shop)%'
+        AND Demand_Type <> 'house'
+        AND Demand_Type <> 'direct'
+),
+
+liveintent_mapped AS (
+    SELECT
+        A.source,
+        A.date,
+        A.partner,
+        A.tag_site,
+        A.transaction_type,
+        --A.site,
+        --A.tier,
+        A.ad_size_initial,
+        B.adsize AS ad_size,
+        A.ad_type,
+        A.path_type,
+        A.device_type_initial,
+        A.device_type,
+        A.country_initial,
+        A.country,
+        A.dsp_initial,
+        A.buyer_initial,
+        A.advertiser_initial,
+        A.deal_id,
+        A.deal_name,
+        A.net_revenue,
+        A.gross_revenue,
+        A.imps,
+        A.active_view_measured_impressions,
+        A.active_view_viewed_impressions,
+        A.bid_requests,
+        A.bid_responses
+    FROM liveintent_cleaned AS A
+
+    LEFT JOIN prog_tag_map AS B
+    ON A.tag_site = B.tag_site_map
+)
+
+SELECT * FROM liveintent_mapped

@@ -1,0 +1,158 @@
+## view name: vw_programmatic_all_medianet
+## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
+## created by: bj.hollowell@meredith.com
+## Last modified on:
+## Last modified by:
+## Change log:
+##
+##
+## notes:
+##
+
+WITH
+
+prog_tag_map AS (
+    SELECT
+        * EXCEPT(tag_site),
+        tag_site AS tag_site_map
+    FROM `meredith-switchboard.summary_reports.programmatic_tag_mapping`
+),
+
+medianet_channelwise_old AS (
+    SELECT
+        '' AS reoprt_date,
+        date AS date,
+        '' AS adtag,
+        NULL AS adtag_id,
+        channelName AS channel,
+        NULL AS channel_id,
+        '' AS site,
+        impressions AS impressions,
+        estimatedRevenue AS estimated_revenue,
+        NULL AS viewable_rpm,
+        NULL AS viewable_impression_percent,
+        rpm AS rpm
+    FROM `meredith-switchboard.media_net.channelwise_*`
+),
+
+medianet_channelwise_base AS (
+    SELECT * FROM `meredith-switchboard.media_net.medianet_api_report_*`
+    UNION ALL
+    SELECT * FROM medianet_channelwise_old
+),
+
+medianet_channelwise_cleaned AS (
+    SELECT
+        'MediaNet API2' AS source,
+        CAST(date AS TIMESTAMP) AS date,
+        'Media.net' AS partner,
+        CONCAT('Media.net', ';', channel) AS tag_site,
+        'Open' AS transaction_type,
+        --'' AS site,
+        --'' AS tier,
+        '' AS ad_size_initial,
+        'Various' AS ad_size,
+        'NonGam Display' AS ad_type,
+        'Indirect' AS path_type,
+        '' AS device_type_initial,
+        '' AS device_type,
+        '' AS country_initial,
+        '' AS country,
+        '' AS dsp_initial,
+        '' AS buyer_initial,
+        '' AS advertiser_initial,
+        '' AS deal_id,
+        '' AS deal_name,
+        (estimated_revenue * 0.7) AS net_revenue,
+        estimated_revenue AS gross_revenue,
+        impressions AS imps,
+        NULL AS active_view_measured_impressions,
+        NULL AS active_view_viewed_impressions,
+        NULL AS bid_requests,
+        NULL AS bid_responses
+    FROM medianet_channelwise_base
+),
+
+medianet_channelwise_mapped AS (
+    SELECT
+        source,
+        date,
+        partner,
+        tag_site,
+        transaction_type,
+        --raw.site,
+        --raw.tier,
+        ad_size_initial,
+        B.adsize AS ad_size,
+        ad_type,
+        path_type,
+        device_type_initial,
+        B.device AS device_type,
+        country_initial,
+        B.country AS country,
+        dsp_initial,
+        buyer_initial,
+        advertiser_initial,
+        deal_id,
+        deal_name,
+        net_revenue,
+        gross_revenue,
+        imps,
+        active_view_measured_impressions,
+        active_view_viewed_impressions,
+        bid_requests,
+        bid_responses
+    FROM medianet_channelwise_cleaned AS A
+
+    LEFT JOIN prog_tag_map AS B
+    ON A.tag_site = B.tag_site_map
+),
+
+medianet_deals_base AS (
+    SELECT * FROM `meredith-switchboard.media_net.medianet_deal_report_*`
+),
+
+medianet_deals_cleaned AS (
+    SELECT
+        'MediaNet API' AS source,
+        CAST(report_date AS TIMESTAMP) AS date,
+        'Media.net' AS partner,
+        CONCAT('Media.net', ';', creative_name) AS tag_site,
+        'Open' AS transaction_type,
+        --'' AS site,
+        --'' AS tier,
+        '' AS ad_size_initial,
+        size AS ad_size,
+        'Display' AS ad_type,
+        'HB' AS path_type,
+        device_name AS device_type_initial,
+        'AMP' AS device_type,
+        country_name AS country_initial,
+        CASE
+            WHEN country_name = 'United States' THEN 'USA'
+            WHEN country_name = 'N/A'           THEN 'Unknown'
+            ELSE 'XUS'
+            END AS country,
+        '' AS dsp_initial,
+        '' AS buyer_initial,
+        advertiser_hostname AS advertiser_initial,
+        '' AS deal_id,
+        '' AS deal_name,
+        audited_pub_revenue AS net_revenue,
+        audited_pub_revenue AS gross_revenue,
+        impressions AS imps,
+        NULL AS active_view_measured_impressions,
+        NULL AS active_view_viewed_impressions,
+        NULL AS bid_requests,
+        NULL AS bid_repsonses
+    FROM medianet_deals_base
+),
+
+medianet_final AS (
+    SELECT * FROM  medianet_channelwise_mapped
+    UNION ALL
+    SELECT * FROM medianet_deals_cleaned
+)
+
+SELECT * FROM medianet_final
+WHERE Date >= '2020-01-01'

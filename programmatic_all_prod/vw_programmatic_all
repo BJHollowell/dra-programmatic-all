@@ -1,0 +1,543 @@
+## view name: vw_programmatic_all
+## description: aggregated SSP data, showing programmatic delivery and impressions
+## created by: BJ Hollowell bj.hollowell@meredith.com
+## Last modified on: 2/14/22
+## Last modified by: bj.hollowell@meredith.com
+## Change log: 2/14/22 BJ implemented new partner views and name changes for Verizon --> Yahoo and PowerInbox --> Jeeng
+##
+## notes:
+##
+##
+WITH
+  AdX_programmatic_all_untagged AS(
+  SELECT
+    *
+  FROM
+    `meredith-switchboard.programmatic_all.vw_AdX_programmatic_all`
+  UNION ALL
+  SELECT
+    *
+  FROM
+    `meredith-switchboard.programmatic_all.vw_AdX_API_programmatic_all`
+  UNION ALL
+  SELECT
+    *
+  FROM
+    `meredith-switchboard.programmatic_all.vw_AdX_GAM_programmatic_all`
+  UNION ALL
+  SELECT
+    *
+  FROM
+    `meredith-switchboard.programmatic_all.vw_AdX_API_PG_and_PD_programmatic_all` ),
+
+  AdX_programmatic_all_tagged AS (
+  SELECT
+    A.Source,
+    DATE(A.Date) AS Date,
+    A.Partner,
+    A.Tag_Site,
+    A.Transaction_type,
+    B.Site,
+    B.Tier,
+    A.Ad_Size_initial,
+    CASE
+      WHEN A.Ad_Size_initial = "390x50" THEN "320x50"
+      WHEN A.Ad_Size_initial = "375x48" THEN "320x50"
+      WHEN A.Ad_Size_initial = "360x46" THEN "320x50"
+      WHEN A.Ad_Size_initial = "412x90" THEN "320x50"
+      WHEN A.Ad_Size_initial = "320x100" THEN "320x50"
+      WHEN A.Ad_Size_initial = "393x50" THEN "320x50"
+      WHEN A.Ad_Size_initial = "336x250" THEN "300x250"
+      WHEN A.Ad_Size_initial = "336x280" THEN "300x250"
+      WHEN A.Ad_Size_initial = "414x250" THEN "300x250"
+      WHEN A.Ad_Size_initial = "412x343" THEN "300x250"
+      WHEN A.Ad_Size_initial = "375x313" THEN "300x250"
+      WHEN A.Ad_Size_initial = "320x250" THEN "300x250"
+      WHEN A.Ad_Size_initial = "414x359" THEN "300x250"
+      WHEN A.Ad_Size_initial = "414x393" THEN "300x250"
+      WHEN A.Ad_Size_initial = "360x306" THEN "300x250"
+      WHEN A.Ad_Size_initial = "412x359" THEN "300x250"
+      WHEN A.Ad_Size_initial = "412x250" THEN "300x250"
+      WHEN A.Ad_Size_initial = "375x317" THEN "300x250"
+      WHEN A.Ad_Size_initial = "375x351" THEN "300x250"
+      WHEN A.Ad_Size_initial = "300x337" THEN "300x250"
+      WHEN A.Ad_Size_initial = "393x327" THEN "300x250"
+      WHEN A.Ad_Size_initial = "360x308" THEN "300x250"
+      WHEN A.Ad_Size_initial = "360x310" THEN "300x250"
+      WHEN A.Ad_Size_initial = "320x267" THEN "300x250"
+      WHEN A.Ad_Size_initial = "330x275" THEN "300x250"
+      WHEN A.Ad_Size_initial = "345x287" THEN "300x250"
+      WHEN A.Ad_Size_initial = "351x250" THEN "300x250"
+      WHEN A.Ad_Size_initial = "360x312" THEN "300x250"
+      WHEN A.Ad_Size_initial = "360x315" THEN "300x250"
+      WHEN A.Ad_Size_initial = "360x322" THEN "300x250"
+      WHEN A.Ad_Size_initial = "360x334" THEN "300x250"
+      WHEN A.Ad_Size_initial = "363x250" THEN "300x250"
+      WHEN A.Ad_Size_initial = "375x315" THEN "300x250"
+      WHEN A.Ad_Size_initial = "375x320" THEN "300x250"
+      WHEN A.Ad_Size_initial = "375x323" THEN "300x250"
+      WHEN A.Ad_Size_initial = "375x421" THEN "300x250"
+      WHEN A.Ad_Size_initial = "377x314" THEN "300x250"
+      WHEN A.Ad_Size_initial = "384x320" THEN "300x250"
+      WHEN A.Ad_Size_initial = "393x250" THEN "300x250"
+      WHEN A.Ad_Size_initial = "393x329" THEN "300x250"
+      WHEN A.Ad_Size_initial = "393x340" THEN "300x250"
+      WHEN A.Ad_Size_initial = "412x345" THEN "300x250"
+      WHEN A.Ad_Size_initial = "412x346" THEN "300x250"
+      WHEN A.Ad_Size_initial = "412x347" THEN "300x250"
+      WHEN A.Ad_Size_initial = "412x361" THEN "300x250"
+      WHEN A.Ad_Size_initial = "412x362" THEN "300x250"
+      WHEN A.Ad_Size_initial = "412x363" THEN "300x250"
+      WHEN A.Ad_Size_initial = "412x365" THEN "300x250"
+      WHEN A.Ad_Size_initial = "412x366" THEN "300x250"
+      WHEN A.Ad_Size_initial = "412x371" THEN "300x250"
+      WHEN A.Ad_Size_initial = "412x378" THEN "300x250"
+      WHEN A.Ad_Size_initial = "412x379" THEN "300x250"
+      WHEN A.Ad_Size_initial = "412x380" THEN "300x250"
+      WHEN A.Ad_Size_initial = "412x387" THEN "300x250"
+      WHEN A.Ad_Size_initial = "414x348" THEN "300x250"
+      WHEN A.Ad_Size_initial = "414x351" THEN "300x250"
+      WHEN A.Ad_Size_initial = "414x355" THEN "300x250"
+      WHEN A.Ad_Size_initial = "414x357" THEN "300x250"
+      WHEN A.Ad_Size_initial = "414x358" THEN "300x250"
+      WHEN A.Ad_Size_initial = "414x361" THEN "300x250"
+      WHEN A.Ad_Size_initial = "414x362" THEN "300x250"
+      WHEN A.Ad_Size_initial = "414x362" THEN "300x250"
+      WHEN A.Ad_Size_initial = "414x465" THEN "300x250"
+      WHEN ((date >= '2021-01-29' AND date <= '2021-03-19')
+        AND A.Ad_Size_initial LIKE '%Video%'
+        AND (A.Tag_Site NOT LIKE '%.video%' AND A.Tag_Site NOT LIKE '%vdn.%' AND A.Tag_Site NOT LIKE '%spinner%' AND A.Tag_Site NOT LIKE '%.shop%'))
+        THEN 'Unknown'
+    ELSE
+      A.Ad_Size
+    END
+      AS Ad_Size,
+    CASE
+      WHEN A.Tag_Site like "%spinner%" THEN "App"
+      WHEN A.Tag_Site like "%vdn%" THEN "MVP"
+      WHEN A.Tag_Site like "%mvp%" THEN "MVP"
+      WHEN (date >= '2021-01-29' AND date <= '2021-03-19')
+        AND A.Tag_Site LIKE '%.video%'
+        THEN 'Video'
+      ## no need for mvp things here, as vdn only existed around this time frame.
+      WHEN (date >= '2021-01-29' AND date <= '2021-03-19')
+        AND ((A.Tag_Site NOT LIKE "%VDN%" AND A.Tag_Site NOT like "%vdn%") OR A.Tag_Site IS NULL)
+        AND (A.Ad_Size_initial like "%Video%" OR A.Ad_Size_initial like "%video%")
+        THEN "Display"
+      ELSE
+      A.Ad_type
+    END
+      AS Ad_type,
+    A.Path_type,
+    A.Device_type_initial,
+    A.Device_type,
+    A.Country_initial,
+    A.Country,
+    A.DSP_initial,
+    A.Buyer_initial,
+    A.Advertiser_initial,
+    A.Deal_Id,
+    A.Deal_Name,
+    A.Net_Revenue,
+    A.Gross_Revenue,
+    CAST(A.Imps AS INT64) AS Imps,
+    A.active_view_measured_impressions,
+    A.active_view_viewed_impressions,
+    A.Bid_requests,
+    A.Bid_responses,
+    case when E.parent_company is null then A.Advertiser_initial
+    else E.parent_company
+    End as Advertiser,
+    C.Buyer,
+    D.DSP,
+    C.Holdco AS HoldCo,
+    C.Agency
+  FROM
+    AdX_programmatic_all_untagged AS A
+  LEFT JOIN
+    `meredith-switchboard.summary_reports.programmatic_tag_mapping` AS B
+  ON
+    A.Tag_Site = B.Tag_Site
+  LEFT JOIN
+    `meredith-switchboard.programmatic_all.Buyer_mapping_table` AS C
+  ON
+    A.Buyer_initial = C.Buyer_initial
+  LEFT JOIN
+    `meredith-switchboard.programmatic_all.DSP_mapping_table` AS D
+  ON
+    A.DSP_initial = D.DSP_initial
+  LEFT JOIN (
+      SELECT
+        UPPER(advertiser_from_source) AS advertiser_from_source,
+        parent_company
+      FROM
+        `meredith-switchboard.digital_ads_maps.master_advertiser_map`
+      GROUP BY
+        advertiser_from_source,
+        parent_company ) as E
+    ON UPPER(A.Advertiser_initial) = E.advertiser_from_source
+    ),
+  programmatic_all_untagged AS(
+  SELECT * FROM `meredith-switchboard.programmatic_all.vw_Index_programmatic_all`
+
+  UNION ALL
+
+  SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_trustx`
+
+  UNION ALL
+
+  SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_teads`
+
+  UNION ALL
+
+  SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_amazon_open`
+
+  UNION ALL
+
+  SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_amazon_pmp`
+
+  UNION ALL
+
+  SELECT * FROM `meredith-switchboard.programmatic_all.vw_rubicon_programmatic_all`
+
+  UNION ALL
+
+  SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_roundel`
+
+  UNION ALL
+
+  SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_openx`
+
+  UNION ALL
+
+  SELECT * FROM  `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_pubmatic`
+
+  UNION ALL
+
+  SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_spotx`
+
+  UNION ALL
+
+  SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_appnexus`
+
+  UNION ALL
+
+  SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_medianet`
+
+  UNION ALL
+
+  SELECT * FROM  `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_rogers`
+
+  UNION ALL
+
+  SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_liveintent`
+
+  UNION ALL
+
+  SELECT * FROM  `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_nativo`
+
+  UNION ALL
+
+  SELECT * FROM  `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_adsense`
+
+  UNION ALL
+
+  SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_solve`
+
+  UNION ALL
+
+  SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_kargo`
+
+  UNION ALL
+
+  SELECT * FROM  `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_gumgum`
+
+  UNION ALL
+
+  SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_outbrain`
+
+  UNION ALL
+
+  SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_videointelligence`
+
+  UNION ALL
+
+  SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_youtube`
+
+  UNION ALL
+
+  SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_yieldmo`
+
+  UNION ALL
+
+  SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_triplelift`
+
+  UNION ALL
+
+  SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_jeeng`
+
+  UNION ALL
+
+  SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_aax`
+
+  UNION ALL
+
+  SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_yahoo`
+  ),
+
+  programmatic_all_tagged AS (
+  SELECT
+    A.Source,
+    DATE(A.Date) AS Date,
+    A.Partner,
+    A.Tag_Site,
+    A.Transaction_type,
+    B.Site,
+    CASE
+      WHEN Source = "Outbrain API" THEN "NoTier"
+      WHEN Source = "Kargo Email" THEN "Unknown"
+      WHEN Source = "VI API" THEN "NoTier"
+      WHEN Source = "YouTube API" THEN "NoTier"
+      WHEN Source = "SpotX custom API" THEN "NoTier"
+      WHEN Source = "Media.net API2" THEN "NoTier"
+      WHEN Source = "Solve Email" THEN "NoTier"
+      WHEN Source = 'Nativo API' AND Ad_Size = 'Native' AND Date >= '2021-08-19' THEN 'NoTier'
+      WHEN Source = 'Nativo API' AND Ad_Size = 'Unknown' AND Date >= '2021-08-19' THEN 'Unknown'
+    ELSE
+      B.Tier
+    END
+      AS Tier,
+    A.Ad_Size_initial,
+    A.Ad_Size,
+    A.Ad_type,
+    A.Path_type,
+    A.Device_type_initial,
+    A.device_type,
+    A.Country_initial,
+    A.Country,
+    A.DSP_initial,
+    A.Buyer_initial,
+    A.Advertiser_initial,
+    A.Deal_Id,
+    A.Deal_Name,
+    A.Net_Revenue,
+    A.Gross_Revenue,
+    CAST(A.Imps AS INT64) AS Imps,
+    A.active_view_measured_impressions,
+    A.active_view_viewed_impressions,
+    A.Bid_requests,
+    A.Bid_responses,
+    Case when E.parent_company is null then A.Advertiser_initial
+    else E.parent_company
+    end as Advertiser,
+    C.Buyer,
+    D.DSP,
+    C.Holdco AS HoldCo,
+    C.Agency
+  FROM
+    programmatic_all_untagged AS A
+  LEFT JOIN
+    `meredith-switchboard.summary_reports.programmatic_tag_mapping` AS B
+  ON
+    A.Tag_Site = B.Tag_Site
+  LEFT JOIN
+    `meredith-switchboard.programmatic_all.Buyer_mapping_table` AS C
+  ON
+    A.Buyer_initial = C.Buyer_initial
+  LEFT JOIN
+    `meredith-switchboard.programmatic_all.DSP_mapping_table` AS D
+  ON
+    A.DSP_initial = D.DSP_initial
+  LEFT JOIN (
+      SELECT
+        UPPER(advertiser_from_source) AS advertiser_from_source,
+        parent_company
+      FROM
+        `meredith-switchboard.digital_ads_maps.master_advertiser_map`
+      GROUP BY
+        advertiser_from_source,
+        parent_company ) as E
+    ON UPPER(A.Advertiser_initial) = E.advertiser_from_source
+    ),
+
+  Pacific_prog_all AS (
+    SELECT
+      A.Source,
+      DATE(A.Date) AS Date,
+      A.Partner,
+      A.Tag_Site,
+      A.Transaction_type,
+      A.Site,
+      A.Tier,
+      A.Ad_Size_initial,
+      A.Ad_Size,
+      A.Ad_type,
+      A.Path_type,
+      A.Device_type_initial,
+      A.Device_type,
+      A.Country_initial,
+      A.Country,
+      A.DSP_initial,
+      A.Buyer_initial,
+      A.Advertiser_initial,
+      A.Deal_Id,
+      A.Deal_Name,
+      A.Net_Revenue,
+      A.Gross_Revenue,
+      CAST(A.Imps AS INT64) AS Imps,
+      A.active_view_measured_impressions,
+      A.active_view_viewed_impressions,
+      A.Bid_requests,
+      A.Bid_repsonses AS Bid_responses,
+      Case when D.parent_company is null then A.Advertiser_initial
+      else D.parent_company
+      end as Advertiser,
+      B.Buyer,
+      C.DSP,
+      B.Holdco AS HoldCo,
+      B.Agency
+    FROM
+      `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_pacific`  AS A
+  LEFT JOIN
+    `meredith-switchboard.programmatic_all.Buyer_mapping_table` AS B
+  ON
+    A.Buyer_initial = B.Buyer_initial
+  LEFT JOIN
+    `meredith-switchboard.programmatic_all.DSP_mapping_table` AS C
+  ON
+    A.DSP_initial = C.DSP_initial
+  LEFT JOIN
+    `meredith-switchboard.digital_ads_maps.master_advertiser_map` AS D
+  ON
+    A.Advertiser_initial = D.advertiser_from_source
+    ),
+
+  programmatic_all AS(
+  SELECT
+    *
+  FROM
+    AdX_programmatic_all_tagged
+  UNION ALL
+  SELECT
+    *
+  FROM
+    programmatic_all_tagged
+  UNION ALL
+  SELECT
+    *
+  FROM
+    Pacific_prog_all),
+
+  Vertical_mapping_table AS(
+  SELECT
+    top_parent_account,
+    parent_account_revised_industry
+  FROM
+    `meredith-switchboard.digital_ads_maps.meredith_vertical_helper`
+  GROUP BY
+    top_parent_account,
+    parent_account_revised_industry),
+
+  programmatic_all_mapped AS(
+  SELECT
+    A.*,
+    B.parent_account_revised_industry as Vertical
+  FROM
+    programmatic_all as A
+  LEFT JOIN
+    Vertical_mapping_table AS B
+  ON
+    A.Advertiser = B.top_parent_account),
+
+  --adding fiscal year, fiscal year-to-date indicators, holidays and holiday periods
+  programmatic_all_calendar AS(
+  SELECT *,
+    CASE WHEN (EXTRACT(DAYOFYEAR FROM date) <= EXTRACT(DAYOFYEAR FROM CURRENT_DATE()) AND EXTRACT(MONTH FROM date) < 07) THEN EXTRACT(YEAR FROM date)
+        WHEN (EXTRACT(MONTH FROM date) > 06 AND EXTRACT(YEAR FROM CURRENT_DATE()) > EXTRACT(YEAR FROM date)) THEN EXTRACT(YEAR FROM date)+1
+        ELSE NULL END AS fiscal_ytd,
+    CASE WHEN (EXTRACT(DAYOFYEAR FROM date) <= EXTRACT(DAYOFYEAR FROM CURRENT_DATE()) AND EXTRACT(MONTH FROM date) < 07) THEN date
+        WHEN (EXTRACT(MONTH FROM date) > 06 AND EXTRACT(YEAR FROM CURRENT_DATE()) > EXTRACT(YEAR FROM date)) THEN date
+        ELSE NULL END AS fiscal_ytd_date
+  FROM programmatic_all_mapped pam
+  LEFT JOIN (
+    SELECT
+      calendar_date,
+      fiscal_quarter,
+      fiscal_year,
+      holiday,
+      period
+    FROM `meredith-switchboard.digital_ads_maps.mdp_calendar`) c
+    ON pam.date = c.CALENDAR_DATE
+  ),
+
+programmatic_all_final AS (
+SELECT
+    Source,
+    Date,
+    Partner,
+    Transaction_type,
+    Site,
+    Tier,
+    Ad_Size,
+    Ad_type,
+    Path_type,
+    Device_type_initial,
+    Device_type,
+    Country,
+    Advertiser_initial,
+    Deal_Id,
+    Deal_Name,
+    Advertiser,
+    Buyer,
+    DSP,
+    HoldCo,
+    Agency,
+    Vertical,
+    calendar_date,
+    fiscal_quarter,
+    fiscal_year,
+    holiday,
+    period,
+    fiscal_ytd,
+    fiscal_ytd_date,
+    SUM(Net_Revenue) AS Net_Revenue,
+    SUM(Gross_Revenue) AS Gross_Revenue,
+    SUM(Imps) AS Imps,
+    SUM(active_view_measured_impressions) AS active_view_measured_impressions,
+    SUM(active_view_viewed_impressions) AS active_view_viewed_impressions,
+    SUM(Bid_requests) AS Bid_requests,
+    SUM(Bid_responses) AS Bid_responses
+FROM programmatic_all_calendar
+GROUP BY
+    Source,
+    Date,
+    Partner,
+    Transaction_type,
+    Site,
+    Tier,
+    Ad_Size,
+    Ad_type,
+    Path_type,
+    Device_type_initial,
+    Device_type,
+    Country,
+    Advertiser_initial,
+    Deal_Id,
+    Deal_Name,
+    Advertiser,
+    Buyer,
+    DSP,
+    HoldCo,
+    Agency,
+    Vertical,
+    calendar_date,
+    fiscal_quarter,
+    fiscal_year,
+    holiday,
+    period,
+    fiscal_ytd,
+    fiscal_ytd_date
+)
+
+SELECT *
+FROM programmatic_all_final

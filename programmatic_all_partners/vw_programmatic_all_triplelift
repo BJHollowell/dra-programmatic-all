@@ -1,0 +1,147 @@
+## view name: vw_programmatic_all_triplelift
+## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
+## created by: bj.hollowell@meredith.com
+## Last modified on:
+## Last modified by:
+## Change log:
+##
+##
+## notes:
+##
+
+WITH
+
+prog_tag_map AS (
+    SELECT
+        * EXCEPT(tag_site),
+        tag_site AS tag_site_map
+    FROM `meredith-switchboard.summary_reports.programmatic_tag_mapping`
+),
+
+triplelift_base AS (
+    SELECT
+        *,
+        CONCAT('TripleLift',';',Publisher_name,';',Placement_name,';',supply_source) AS tag_site
+        -- Partner + ";" publisher_name + ";" + placement_name + ";" + supply source
+    FROM `meredith-switchboard.triplelift.triplelift_api_*`
+    WHERE report_date >= '2020-01-01'
+),
+
+triplelift_cleaned AS (
+    SELECT
+        'TripleLift API' AS source,
+        CAST(report_date AS TIMESTAMP) AS date,
+        'TripleLift' AS partner,
+        tag_site,
+        --site,
+        --'Unknown' AS tier,
+        CASE
+            WHEN deal_name = '%N/A%' THEN 'Open'
+            WHEN deal_name = ' '     THEN 'Open'
+            WHEN deal_name IS NULL   THEN 'Open'
+            ELSE 'PMP'
+            END AS transaction_type,
+        '' AS ad_size_initial,
+        map.adsize AS ad_size,
+        -- if placement name contains 'Meredith_video'' then 'Video'; if placement name contains 'android' then 'App'; if 'supply_source'' ="Direct" then ""NonGam Display""; if not them "Display"
+        CASE
+            WHEN placement_name LIKE '%Meredith_video%' THEN 'Video'
+            WHEN placement_name LIKE '%android%'        THEN 'App'
+            WHEN placement_name LIKE '%Android%'        THEN 'App'
+            WHEN supply_source LIKE '%Direct%'          THEN "NonGam Display"
+            ELSE "Display"
+            END AS ad_type,
+        CASE
+            WHEN supply_source LIKE '%Direct%' THEN 'Selectable Tag'
+            ELSE "TAM"
+            END AS path_type,
+        CASE
+            WHEN device_type = 'Desktop' THEN 'Desktop'
+            WHEN device_type = 'Tablet'  THEN 'Desktop'
+            WHEN device_type  = 'Phone'  THEN 'MobileWeb'
+            ELSE 'Unknown'
+            END AS device_type,
+        country_name as country_initial,
+        -- if 'country_name' = "United States" then "USA"; if 'Country' = "N/A" then "Unknown"; if 'Country' is NOT "United States" OR "N/A" then "XUS"
+        CASE
+            WHEN country_name LIKE '%United States%' THEN 'USA'
+            WHEN country_name IS NULL                THEN 'Unknown'
+            ELSE 'XUS'
+            END AS country,
+        device_type AS device_Type_initial,
+        buyer_member AS dsp_initial,
+        '' AS buyer_initial,
+        brand AS advertiser_initial,
+        deal_code AS deal_id,
+        deal_name AS deal_name,
+        revenue AS net_revenue,
+        revenue AS gross_revenue,
+        rendered AS Imps,
+        NULL AS active_view_measured_impressions,
+        NULL AS active_view_viewed_impressions,
+        NULL AS bid_requests,
+        NULL AS bid_responses
+    FROM triplelift_base AS raw
+
+    LEFT JOIN prog_tag_map AS map
+    ON raw.tag_site = map.tag_site_map
+),
+
+triplelift_final AS (
+    SELECT
+        source,
+        date,
+        partner,
+        tag_site,
+        transaction_type,
+        --site,
+        --tier,
+        ad_size_initial,
+        ad_size,
+        ad_type,
+        path_type,
+        device_type_initial,
+        device_type,
+        country_initial,
+        country,
+        dsp_initial,
+        buyer_initial,
+        advertiser_initial,
+        deal_id,
+        deal_name,
+        SUM(net_revenue) AS net_revenue,
+        SUM(gross_revenue) AS gross_revenue,
+        SUM(imps) AS imps,
+        active_view_measured_impressions,
+        active_view_viewed_impressions,
+        bid_requests,
+        bid_responses
+    FROM triplelift_cleaned
+    GROUP BY
+        source,
+        date,
+        partner,
+        tag_site,
+        transaction_type,
+        --site,
+        --tier,
+        ad_size_initial,
+        ad_size,
+        ad_type,
+        path_type,
+        device_type,
+        device_type_initial,
+        country_initial,
+        country,
+        dsp_initial,
+        buyer_initial,
+        advertiser_initial,
+        deal_id,
+        deal_name,
+        active_view_measured_impressions,
+        active_view_viewed_impressions,
+        bid_requests,
+        bid_responses
+)
+
+SELECT * FROM triplelift_final

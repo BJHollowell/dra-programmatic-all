@@ -1,0 +1,76 @@
+## view name: vw_programmatic_all_aax
+## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
+## created by: bj.hollowell@meredith.com
+## Last modified on:
+## Last modified by:
+## Change log:
+##
+##
+## notes:
+##
+
+WITH
+
+aax_base AS (
+    SELECT
+        *,
+        _table_suffix AS table_id
+    FROM `meredith-switchboard.aax.aax_report_*`
+    WHERE stats_date >= '2020-01-01'
+),
+
+aax_cleaned AS (
+    SELECT
+        table_id,
+        'AAX API' AS source,
+        CAST(stats_date AS TIMESTAMP) AS date,
+        'AAX' AS partner,
+        CONCAT('AAX', ';', domain_name, ';', creative_name) AS tag_site,
+        'Open' AS transaction_type,
+        --'' AS site,
+        --'' AS tier,
+        '' AS ad_size_initial,
+        size AS ad_size,
+        'Display' AS ad_type,
+        'Indirect' AS path_type,
+        device_name AS device_type_initial,
+        CASE
+            WHEN device_name = 'DESKTOP' THEN 'Desktop'
+            WHEN device_name = 'MOBILE'  THEN 'MobileWeb'
+            ELSE ''
+            END AS device_type,
+        country_name AS country_initial,
+        CASE
+            WHEN country_name = 'United States' THEN 'USA'
+            WHEN country_name = 'N/A'           THEN 'Unknown'
+            ELSE 'XUS'
+            END AS country,
+        '' AS dsp_initial,
+        '' AS buyer_initial,
+        '' AS advertiser_initial,
+        '' AS deal_id,
+        '' AS deal_name,
+        audited_pub_revenue AS net_revenue,
+        (audited_pub_revenue / 0.85) AS gross_revenue,
+        impressions AS imps,
+        NULL AS active_view_measured_impressions,
+        NULL AS active_view_viewed_impressions,
+        NULL AS bid_requests,
+        NULL AS bid_repsonses
+    FROM aax_base
+    WHERE provider_name = 'AAX'
+),
+
+aax_deduped AS (
+    SELECT * FROM aax_cleaned
+    INNER JOIN (
+    SELECT
+        date AS date_join,
+        MAX(table_id) AS table_id_join
+    FROM aax_cleaned
+    GROUP BY date) dedupe
+    ON (aax_cleaned.date = dedupe.date_join AND aax_cleaned.table_id = dedupe.table_id_join)
+)
+
+SELECT * EXCEPT(table_id, table_id_join, date_join)
+FROM aax_deduped

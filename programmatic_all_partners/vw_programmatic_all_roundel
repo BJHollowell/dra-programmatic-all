@@ -1,0 +1,237 @@
+## view name: vw_programmatic_all_roundel
+## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
+## created by: bj.hollowell@meredith.com
+## Last modified on:
+## Last modified by: andy.bieber@meredith.com
+## Change log: 2/11/2022 Andy added size logic: WHEN size LIKE '%250x250%'   THEN '300x250'
+##
+##
+## notes:
+##
+
+WITH
+
+roundel_brands_base AS (
+    SELECT
+        *,
+        _Table_Suffix AS table_num
+    FROM `meredith-switchboard.roundel.roundel_buyer_and_brand_raw_*`
+    WHERE day >= '2020-01-01'
+),
+
+roundel_brands_deduped AS (
+    SELECT
+        * EXCEPT (table_num, file_count, file_max)
+    FROM (
+        SELECT
+            *,
+            COUNT(DISTINCT(table_num)) OVER (PARTITION BY day) AS file_count,
+            MAX(table_num) OVER (PARTITION BY day) AS file_max
+        FROM roundel_brands_base
+    )
+    WHERE
+        (file_count = 1) OR (file_count > 1 AND table_num = file_max)
+),
+
+roundel_brands_cleaned AS (
+    SELECT
+        'Roundel Email' AS source,
+        CAST(day AS TIMESTAMP) AS date,
+        'Roundel' AS partner,
+        CONCAT('Roundel', ';', domain) AS tag_site,
+        'PMP' AS transaction_Type,
+        --'' AS site,
+        --'' AS tier,
+        size AS ad_size_initial,
+        CASE
+            WHEN size LIKE '%640x360%'   THEN 'Video/Overlay'
+            WHEN size LIKE '%640x480%'   THEN 'Video/Overlay'
+            WHEN size LIKE '%300x50'     THEN 'Other'
+            WHEN size LIKE '%336x280'    THEN 'Other'
+            WHEN size LIKE '%160x600'    THEN 'Other'
+            WHEN size LIKE '%816x459%'   THEN 'Other'
+            WHEN size LIKE '%1920x1080%' THEN 'Other'
+            WHEN size LIKE '%320x100%'   THEN 'Other'
+            WHEN size LIKE '%468x60%'    THEN 'Other'
+            WHEN size LIKE '%400x225%'   THEN 'Other'
+            WHEN size LIKE '%640x360%'   THEN 'Other'
+            WHEN size LIKE '%970x90%'    THEN 'Other'
+            WHEN size LIKE '%250x250%'   THEN '300x250'
+            ELSE size
+            END AS ad_size,
+        CASE
+            WHEN size LIKE '%640x360%' THEN 'Video'
+            WHEN size LIKE '%640x480%' THEN 'Video'
+            ELSE 'Display'
+            END AS ad_type,
+        'HB' AS path_type,
+        device_type AS device_type_initial,
+        CASE
+            WHEN device_type LIKE '%mobile%'      THEN 'MobileWeb'
+            WHEN device_type LIKE '%phone%'       THEN 'MobileWeb'
+            WHEN device_type LIKE '%desktop%'     THEN 'Desktop'
+            WHEN device_type LIKE '%tablet%'      THEN 'Desktop'
+            WHEN device_type LIKE '%personal%'    THEN 'Desktop'
+            WHEN device_type LIKE '%connected%'   THEN 'Connected TV'
+            WHEN device_type LIKE '%set_top_box%' THEN 'Connected TV'
+            ELSE 'Unknown'
+            END AS device_type,
+        '' AS country_initial,
+        'USA' AS country,
+        dsp_name AS dsp_initial,
+        buyer_name AS buyer_initial,
+        brand_name AS advertiser_initial,
+        deal_id AS deal_id,
+        deal_name AS deal_name,
+        deal_net_revenue AS net_revenue,
+        (deal_net_revenue / 0.9) AS gross_revenue,
+        deal_impressions AS imps,
+        NULL AS active_view_measured_impressions,
+        NULL AS active_view_viewed_impressions,
+        NULL AS bid_requests,
+        NULL AS bid_responses
+    FROM roundel_brands_deduped
+),
+
+roundel_deals_base AS (
+    SELECT
+        *,
+        _Table_Suffix AS table_num
+    FROM `meredith-switchboard.roundel.roundel_deals_activity_raw_*`
+    WHERE day >= '2020-01-01'
+),
+
+roundel_deals_deduped AS (
+    SELECT
+        * EXCEPT(table_num, file_count, file_max)
+    FROM (
+        SELECT
+            *,
+            COUNT(DISTINCT(table_num)) OVER (PARTITION BY day) AS file_count,
+            MAX(table_num) OVER (PARTITION BY day) AS file_max
+        FROM roundel_deals_base
+    )
+    WHERE
+        (file_count = 1) OR (file_count > 1 AND table_num = file_max)
+),
+
+roundel_deals_cleaned AS (
+    SELECT
+        'Roundel Email' AS source,
+        CAST(day AS TIMESTAMP) AS date,
+        'Roundel' AS partner,
+        CONCAT('Roundel', ';', domain) AS tag_site,
+        'PMP' AS transaction_type,
+        --'' AS site,
+        --'' AS tier,
+        size AS ad_size_initial,
+        CASE
+            WHEN size LIKE '%640x360%'   THEN 'Video/Overlay'
+            WHEN size LIKE '%640x480%'   THEN 'Video/Overlay'
+            WHEN size LIKE '%300x50'     THEN 'Other'
+            WHEN size LIKE '%336x280'    THEN 'Other'
+            WHEN size LIKE '%160x600'    THEN 'Other'
+            WHEN size LIKE '%816x459%'   THEN 'Other'
+            WHEN size LIKE '%1920x1080%' THEN 'Other'
+            WHEN size LIKE '%320x100%'   THEN 'Other'
+            WHEN size LIKE '%468x60%'    THEN 'Other'
+            WHEN size LIKE '%400x225%'   THEN 'Other'
+            WHEN size LIKE '%640x360%'   THEN 'Other'
+            WHEN size LIKE '%970x90%'    THEN 'Other'
+            WHEN size LIKE '%250x250%'   THEN '300x250'
+            ELSE size
+            END AS ad_size,
+        CASE
+            WHEN size LIKE '%640x360%' THEN 'Video'
+            WHEN size LIKE '%640x480%' THEN 'Video'
+            ELSE 'Display'
+            END AS ad_type,
+        'HB' AS path_type,
+        device_type AS device_type_initial,
+        CASE
+            WHEN device_type LIKE '%mobile%'      THEN 'MobileWeb'
+            WHEN device_type LIKE '%phone%'       THEN 'MobileWeb'
+            WHEN device_type LIKE '%desktop%'     THEN 'Desktop'
+            WHEN device_type LIKE '%tablet%'      THEN 'Desktop'
+            WHEN device_type LIKE '%personal%'    THEN 'Desktop'
+            WHEN device_type LIKE '%connected%'   THEN 'Connected TV'
+            WHEN device_type LIKE '%set_top_box%' THEN 'Connected TV'
+            ELSE 'Unknown'
+            END AS device_type,
+        country AS country_initial,
+        'USA' AS country,
+        '' AS dsp_initial,
+        '' AS buyer_initial,
+        '' AS advertiser_initial,
+        deal_id AS deal_id,
+        deal_name AS deal_name,
+        NULL AS net_revenue,
+        NULL AS gross_revenue,
+        NULL AS imps,
+        NULL AS active_view_measured_impressions,
+        NULL AS active_view_viewed_impressions,
+        bid_request AS bid_requests,
+        bid_chosen AS bid_responses
+    FROM roundel_deals_deduped
+),
+
+roundel_combined AS (
+    SELECT * FROM roundel_brands_cleaned
+    UNION ALL
+    SELECT * FROM roundel_deals_cleaned
+)
+
+SELECT
+    source,
+    date,
+    partner,
+    tag_site,
+    transaction_type,
+    --site,
+    --tier,
+    ad_size_initial,
+    ad_size,
+    ad_type,
+    path_type,
+    device_type_initial,
+    device_type,
+    country_initial,
+    country,
+    dsp_initial,
+    buyer_initial,
+    advertiser_initial,
+    deal_id,
+    deal_name,
+    SUM(net_revenue) AS net_revenue,
+    SUM(gross_revenue) AS gross_revenue,
+    SUM(imps) AS imps,
+    active_view_measured_impressions,
+    active_view_viewed_impressions,
+    bid_requests,
+    bid_responses
+FROM roundel_combined
+GROUP BY
+    source,
+    date,
+    partner,
+    tag_site,
+    transaction_type,
+    --site,
+    --tier,
+    ad_size_initial,
+    ad_size,
+    ad_type,
+    path_type,
+    device_type_initial,
+    device_type,
+    country_initial,
+    country,
+    dsp_initial,
+    buyer_initial,
+    advertiser_initial,
+    deal_id,
+    deal_name,
+    active_view_measured_impressions,
+    active_view_viewed_impressions,
+    bid_requests,
+    bid_responses

@@ -1,0 +1,60 @@
+## view name: vw_programmatic_all_videointelligence
+## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
+## created by: bj.hollowell@meredith.com
+## Last modified on:
+## Last modified by:
+## Change log:
+##
+##
+## notes:
+##
+
+WITH
+
+vi_base AS (
+    SELECT * FROM `meredith-switchboard.video_intelligence.video_intelligence_*`
+),
+
+vi_cleaned AS (
+    SELECT
+        'VI API' AS source,
+        CAST(Date AS TIMESTAMP) AS date,
+        'VI' AS partner,
+        CONCAT('VI', ';', domain) as tag_site,
+        'Open' AS transaction_type,
+        --'' AS site,
+        --'' AS tier,
+        '' AS ad_size_initial,
+        'Video/Overlay' AS ad_size,
+        'Video' AS ad_type,
+        'Indirect' AS path_type,
+        deviceType AS device_type_initial,
+        CASE
+            WHEN deviceType LIKE '%Desktop%' THEN 'Desktop'
+            WHEN deviceType LIKE '%desktop%' THEN 'Desktop'
+            WHEN deviceType LIKE '%Mobile%'  THEN 'MobileWeb'
+            WHEN deviceType LIKE '%mobile%'  THEN 'MobileWeb'
+            ELSE 'Unknown'
+            END AS device_type,
+        country AS country_initial,
+        CASE
+            WHEN country LIKE 'US' THEN 'USA'
+            WHEN country LIKE 'N/A' THEN 'Unknown'
+            ELSE 'XUS'
+            END AS country,
+        '' AS dsp_initial,
+        '' AS buyer_initial,
+        '' AS advertiser_initial,
+        '' AS deal_id,
+        '' AS deal_name,
+        netRevenue AS net_revenue,
+        (netRevenue / 0.7) AS gross_revenue,
+        inventoryImpressions AS imps,
+        NULL AS active_view_measured_impressions,
+        NULL AS active_view_viewed_impressions,
+        NULL AS bid_requests,
+        NULL AS bid_responses
+    FROM vi_base
+)
+
+SELECT * FROM vi_cleaned

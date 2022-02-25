@@ -1,0 +1,28 @@
+WITH
+
+programmatic_pmp AS (
+SELECT * FROM `meredith-switchboard.programmatic_all.tbl_programmatic_all`
+WHERE
+  Transaction_type = 'PMP'
+),
+
+
+csmm_map AS (
+SELECT
+  deal_id AS deal_id_csm,
+  deal_name AS deal_name_csm,
+  csm,
+  csmm_holdco,
+  csmm_advertiser
+FROM `meredith-switchboard.programmatic_all.tbl_csmm_programmatic_map`
+),
+
+
+final_table AS (
+SELECT * FROM programmatic_pmp AS p
+LEFT JOIN csmm_map AS m
+ON p.Deal_Id = m.deal_id_csm
+)
+
+
+SELECT * FROM final_table

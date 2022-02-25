@@ -1,0 +1,112 @@
+## view name: vw_programmatic_all_gumgum
+## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
+## created by: bj.hollowell@meredith.com
+## Last modified on:
+## Last modified by:
+## Change log:
+##
+##
+## notes:
+##
+
+WITH
+
+prog_tag_map AS (
+    SELECT
+        * EXCEPT(tag_site),
+        tag_site AS tag_site_map
+    FROM `meredith-switchboard.summary_reports.programmatic_tag_mapping`
+),
+
+gumgum_base AS (
+    SELECT
+        *,
+        _Table_Suffix AS table_num
+    FROM `meredith-switchboard.gumgum.gumgum*`
+    WHERE day >= '2020-01-01'
+),
+
+gumgum_cleaned AS (
+    SELECT
+        table_num,
+        'Gumgum API' AS source,
+        CAST(day AS TIMESTAMP) AS date,
+        'GumGum' AS partner,
+        CONCAT('GumGum', ';', zone_name) AS tag_site,
+        'Open' as transaction_type,
+        --'' AS site,
+        --'' AS tier,
+        '' AS ad_size_initial,
+        '' AS ad_size,
+        'Display' AS ad_type,
+        'Tag in adserver' AS path_type,
+        '' AS device_type_initial,
+        '' AS device_type,
+        '' AS country_initial,
+        '' AS country,
+        '' AS dsp_initial,
+        '' AS buyer_initial,
+        '' AS advertiser_initial,
+        '' AS deal_id,
+        '' AS deal_name,
+        earnings AS net_revenue,
+        (earnings / 0.9) AS gross_revenue,
+        ad_impressions AS Imps,
+        NULL AS active_view_measured_impressions,
+        NULL AS active_view_viewed_impressions,
+        NULL AS bid_requests,
+        NULL AS bid_responses
+    FROM gumgum_base
+    WHERE
+        zone_name NOT LIKE '%TAM%'
+        AND zone_name NOT LIKE '%allrecipes.com app%'
+),
+
+gumgum_deduped AS (
+    SELECT
+        * EXCEPT(table_num, file_count, file_max)
+    FROM (
+        SELECT
+            *,
+            COUNT(DISTINCT(table_num)) OVER (PARTITION BY Date) AS file_count,
+            MAX(table_num) OVER (PARTITION BY Date) AS file_max
+        FROM gumgum_cleaned
+    )
+    WHERE (file_count = 1) OR (file_count > 1 AND table_num = file_max)
+),
+
+gumgum_mapped AS (
+    SELECT
+        A.source,
+        A.date,
+        A.partner,
+        A.tag_site,
+        A.transaction_type,
+        --A.site,
+        --A.tier,
+        A.ad_Size_initial,
+        B.Adsize AS ad_size,
+        A.ad_type,
+        A.path_type,
+        A.device_type_initial,
+        B.device AS device_type,
+        A.country_initial,
+        B.country AS country,
+        A.dsp_initial,
+        A.buyer_initial,
+        A.advertiser_initial,
+        A.deal_id,
+        A.deal_name,
+        A.net_revenue,
+        A.gross_revenue,
+        CAST(A.imps AS INT64) AS imps,
+        A.active_view_measured_impressions,
+        A.active_view_viewed_impressions,
+        A.bid_requests,
+        A.bid_responses
+    FROM gumgum_deduped AS A
+    LEFT JOIN prog_tag_map AS B
+    ON A.tag_site = B.tag_site_map
+)
+
+SELECT * FROM gumgum_mapped

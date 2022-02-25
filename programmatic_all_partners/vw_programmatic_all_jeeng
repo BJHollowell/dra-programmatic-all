@@ -1,0 +1,145 @@
+## view name: vw_programmatic_all_jeeng
+## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
+## created by: bj.hollowell@meredith.com
+## Last modified on: 2/14/22
+## Last modified by: bj.hollowell@meredith.com
+## Change log: switched 'PowerInbox' to 'Jeeng'
+##
+##
+## notes:
+##
+
+WITH
+
+prog_tag_map AS (
+    SELECT
+        * EXCEPT(tag_site),
+        tag_site AS tag_site_map
+    FROM `meredith-switchboard.summary_reports.programmatic_tag_mapping`
+),
+
+jeeng_deduped  AS (
+    SELECT * FROM (
+        SELECT
+            _table_suffix AS table_num,
+            date,
+            advertiser,
+            SUM(revenue) AS revenue,
+            SUM(impressions) AS impressions,
+            SUM(total_clicks) AS total_clicks
+        FROM `meredith-switchboard.power_inbox.power_inbox_*`
+        GROUP BY
+            date,
+            advertiser,
+            _table_suffix) t1
+        INNER JOIN (
+            SELECT
+                MAX(_table_suffix) AS max_table_num,
+                date AS max_date
+            FROM `meredith-switchboard.power_inbox.power_inbox_*`
+            GROUP BY date) t2
+        ON t1.date = t2.max_date
+        AND t1.table_num = t2.max_table_num
+),
+
+jeeng_base AS (
+    SELECT
+        *,
+        'Jeeng' AS tag_site
+    FROM jeeng_deduped
+    WHERE date >= '2020-01-01'
+),
+
+jeeng_cleaned AS (
+    SELECT
+        'Jeeng Email' AS source,            ## formerly 'PI Email'
+        CAST(date AS TIMESTAMP) AS date,
+        'Jeeng' AS partner,                 ## formerly PowerInbox
+        tag_site,
+        'Open' AS transaction_type,
+        --'Unallocated' AS site,
+        --'No Tier' AS tier,
+        '' AS ad_size_initial,
+        'Unknown' AS ad_size,
+        'NonGam Display' AS ad_type,
+        'Indirect' AS path_type,
+        '' AS device_type_initial,
+        'Unknown' AS device_type,
+        '' AS country_initial,
+        'Unknown' AS country,
+        '' AS dsp_initial,
+        '' AS buyer_initial,
+        advertiser as advertiser_initial,
+        '' AS deal_id,
+        '' AS deal_name,
+        revenue AS net_revenue,
+        (revenue / 0.7) AS gross_revenue,
+        impressions AS imps,
+        NULL AS active_view_measured_impressions,
+        NULL AS active_view_viewed_impressions,
+        NULL AS bid_requests,
+        NULL AS bid_responses
+    FROM jeeng_base AS A
+
+    LEFT JOIN prog_tag_map AS B
+    ON A.tag_site = B.tag_site_map
+),
+
+jeeng_final AS (
+    SELECT
+        source,
+        date,
+        partner,
+        tag_site,
+        transaction_type,
+        --site,
+        --tier,
+        ad_size_initial,
+        ad_size,
+        ad_type,
+        path_type,
+        device_type_initial,
+        device_type,
+        country_initial,
+        country,
+        dsp_initial,
+        buyer_initial,
+        advertiser_initial,
+        deal_id,
+        deal_name,
+        sum(net_revenue) as net_revenue,
+        sum(gross_revenue) as gross_revenue,
+        sum(imps) as imps,
+        active_view_measured_impressions,
+        active_view_viewed_impressions,
+        bid_requests,
+        bid_responses
+    FROM jeeng_cleaned
+    GROUP BY
+        source,
+        date,
+        partner,
+        tag_site,
+        transaction_type,
+        --site,
+        --tier,
+        ad_size_initial,
+        ad_size,
+        ad_type,
+        path_type,
+        device_type_initial,
+        device_type,
+        country_initial,
+        country,
+        dsp_initial,
+        buyer_initial,
+        advertiser_initial,
+        deal_id,
+        deal_name,
+        active_view_measured_impressions,
+        active_view_viewed_impressions,
+        bid_requests,
+        bid_responses
+)
+
+SELECT * FROM jeeng_final

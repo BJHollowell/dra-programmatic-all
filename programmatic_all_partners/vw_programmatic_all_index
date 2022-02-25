@@ -1,0 +1,307 @@
+## view name: vw_programmatic_all_index
+## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
+## created by: bj.hollowell@meredith.com
+## Last modified on:
+## Last modified by:
+## Change log:
+##
+##
+## notes:
+##
+
+WITH
+
+prog_tag_map AS (
+    SELECT
+        * EXCEPT(tag_site),
+        tag_site AS tag_site_map
+    FROM `meredith-switchboard.summary_reports.programmatic_tag_mapping`
+),
+
+index_base AS (
+    SELECT
+        A.*,
+        B.buyer_name AS buyer_name,
+        C.deal_type AS deal_type,
+        C.deal_name AS deal_name,
+        D.dsp_name AS dsp_name,
+        E.site_name AS site_name
+    FROM `meredith-switchboard.indexexchange_audit_logs.indexexchange_impression_log` A
+
+    LEFT JOIN `meredith-switchboard.indexexchange_audit_logs.mapping_buyers` B
+    ON A.dsp_id = B.dsp_id AND A.trading_desk_id = B.trading_desk_id
+
+    LEFT JOIN `meredith-switchboard.indexexchange_audit_logs.mapping_deals` C
+    ON A.deal_id = C.deal_id
+
+    LEFT JOIN `meredith-switchboard.indexexchange_audit_logs.mapping_dsps` D
+    ON A.dsp_id = D.dsp_id
+
+    LEFT JOIN `meredith-switchboard.indexexchange_audit_logs.mapping_sites` E
+    ON A.site_id = E.site_id
+
+    WHERE TIMESTAMP_MILLIS(timestamp) >= '2020-01-01'
+),
+
+index_OB_base AS (
+    SELECT
+        *,
+        _table_suffix AS table_num
+    FROM `meredith-switchboard.programmatic_all.index_exchange_OB_programmatic_all_*`
+),
+
+index_cleaned AS (
+    SELECT
+        mdpfiledate,
+        'Index CAL' AS source,
+        TIMESTAMP_MILLIS(timestamp) AS date,
+        'Index' AS partner,
+        CONCAT('Index', ';', index_base.site_name) AS tag_site,
+        CASE
+            WHEN deal_type IS NULL THEN 'Open'
+            ELSE 'PMP'
+            END AS transaction_type,
+        --'' AS site,
+        --'' AS tier,
+        CASE
+            WHEN size = '300x250'       THEN '300x250'
+            WHEN size = '320x50'        THEN '320x50'
+            WHEN size = '728x90'        THEN '728x90'
+            WHEN size = '300x600'       THEN '300x600'
+            WHEN size = 'Video/Overlay' THEN 'Video/Overlay'
+            WHEN size = '970x250'       THEN '970x250'
+            WHEN size = '300x1050'      THEN '300x1050'
+            WHEN size = 'Fluid'         THEN 'Fluid'
+            ELSE size
+            END AS ad_size_initial,
+        CASE
+            WHEN size = '300x250'       THEN '300x250'
+            WHEN size = '320x50'        THEN '320x50'
+            WHEN size = '728x90'        THEN '728x90'
+            WHEN size = '300x600'       THEN '300x600'
+            WHEN size = 'Video/Overlay' THEN 'Video/Overlay'
+            WHEN size = '970x250'       THEN '970x250'
+            WHEN size = '970x90'        THEN '970x90'
+            WHEN size = '300x1050'      THEN '300x1050'
+            WHEN size = 'Fluid'         THEN 'Fluid'
+            WHEN size = '640x360'       THEN 'Video/Overlay'
+            ELSE 'Other'
+            END AS ad_size,
+        CASE
+            WHEN inventory_channel = 'Video'  THEN 'Video'
+            WHEN inventory_channel = 'In-App' THEN 'App'
+            WHEN size = '640x360'             THEN 'Video'
+            ELSE 'Display'
+            END AS ad_type,
+        CASE
+            WHEN supply_source = 'ebda'       THEN 'OB'
+            WHEN supply_source = 'enterprise' THEN 'TAM'
+            ELSE 'HB'
+            END AS path_type,
+        device_type AS device_type_initial,
+        CASE
+            WHEN inventory_channel LIKE '%AMP%' THEN 'AMP'
+            WHEN inventory_channel LIKE '%amp%' THEN 'AMP'
+            WHEN device_type = 'mobile'         THEN 'MobileWeb'
+            WHEN device_type = 'Mobile'         THEN 'MobileWeb'
+            WHEN device_type = 'desktop'        THEN 'Desktop'
+            WHEN device_type = 'Desktop'        THEN 'Desktop'
+            ELSE device_type
+            END AS device_type,
+        country as Country_initial,
+        CASE
+            WHEN country = 'US'      THEN 'USA'
+            WHEN country = 'Unknown' THEN 'Unknown'
+            ELSE 'XUS'
+            END AS country,
+        dsp_name AS dsp_initial,
+        buyer_name AS buyer_initial,
+        brand_name AS advertiser_initial,
+        CASE
+            WHEN deal_id = 'omitted' THEN 'Open'
+            ELSE deal_id
+            END AS deal_id,
+        CASE
+            WHEN deal_name IS NULL THEN 'Open'
+            ELSE deal_name
+            END AS deal_name,
+        net_revenue AS net_revenue,
+        gross_revenue AS gross_revenue,
+        1 AS imps,
+        NULL AS active_view_measured_impressions,
+        NULL AS active_view_viewed_impressions,
+        NULL AS bid_requests,
+        NULL AS bid_responses,
+        --indexexchange_audit_log_source_filename AS filename,
+        --switchboard_processing_time
+    FROM index_base
+    WHERE supply_source <> 'ebda'
+),
+
+index_unioned AS (
+    SELECT * FROM index_cleaned
+    UNION ALL
+
+    SELECT
+        CAST(table_num AS DATE) AS mdpfiledate,
+        source,
+        date,
+        partner,
+        tag_site,
+        transaction_type,
+        --'' AS site,
+        --'' AS tier,
+        ad_size_initial,
+        CASE
+            WHEN source = 'Index CAL_OB' AND ad_size = '300x250'  THEN '300x250'
+            WHEN source = 'Index CAL_OB' AND ad_size = '320x50'   THEN '320x50'
+            WHEN source = 'Index CAL_OB' AND ad_size = '728x90'   THEN '728x90'
+            WHEN source = 'Index CAL_OB' AND ad_size = '300x600'  THEN '300x600'
+            WHEN source = 'Index CAL_OB' AND ad_size = '300x1050' THEN '300x1050'
+            ELSE 'Video/Overlay'
+            END AS ad_size,
+        ad_type,
+        path_type,
+        device_type_initial,
+        device_type,
+        country_initial,
+        country,
+        dsp_initial,
+        buyer_initial,
+        advertiser_initial,
+        deal_id,
+        deal_name,
+        net_revenue,
+        gross_revenue,
+        imps,
+        NULL AS active_view_measured_impressions,
+        NULL AS active_view_viewed_impressions,
+        NULL AS bid_requests,
+        NULL AS bid_responses,
+        --'' AS filename
+    FROM index_OB_base
+),
+
+index_deduped AS (
+    SELECT
+        * EXCEPT(mdpfiledate, file_count, file_max)
+    FROM (
+        SELECT
+            *,
+            COUNT(DISTINCT(mdpfiledate)) OVER (PARTITION BY Date) AS file_count,
+            MAX(mdpfiledate) OVER (PARTITION BY Date) AS file_max
+        FROM index_unioned
+    )
+    WHERE (file_count = 1) OR (file_count > 1 AND mdpfiledate = file_max)
+),
+
+/*
+index_cal_agg AS(
+    SELECT
+        filename as filename_dupe,
+        max_time
+    FROM (
+        SELECT
+            filename,
+            MAX(switchboard_processing_time) OVER (PARTITION BY filename) as max_time
+        FROM index_cleaned
+        GROUP BY
+            filename,
+            switchboard_processing_time
+    )
+    GROUP BY
+        filename,
+        max_time
+),
+
+index_cal_dedupe AS (
+    SELECT *
+    FROM index_cleaned A
+    LEFT JOIN index_cal_agg B
+    ON A.filename = B.filename_dupe AND A.switchboard_processing_time = B.max_time
+),
+*/
+
+/*
+index_mapped AS(
+    SELECT
+        A.source,
+        A.date,
+        A.partner,
+        A.tag_site,
+        A.transaction_type,
+        --B.Site,
+        --B.Tier,
+        A.ad_size_initial,
+        CASE
+            WHEN A.source = 'Index CAL_OB' AND A.ad_size = '300x250'  THEN '300x250'
+            WHEN A.source = 'Index CAL_OB' AND A.ad_size = '320x50'   THEN '320x50'
+            WHEN A.source = 'Index CAL_OB' AND A.ad_size = '728x90'   THEN '728x90'
+            WHEN A.source = 'Index CAL_OB' AND A.ad_size = '300x600'  THEN '300x600'
+            WHEN A.source = 'Index CAL_OB' AND A.ad_size = '300x1050' THEN '300x1050'
+            WHEN A.source = 'Index CAL'    THEN A.ad_size
+            ELSE 'Video/Overlay'
+            END AS ad_size,
+        A.ad_type,
+        A.path_type,
+        A.device_type_initial,
+        A.device_type,
+        A.country_initial,
+        A.country,
+        A.dsp_initial,
+        A.buyer_initial,
+        A.advertiser_initial,
+        A.deal_id,
+        A.deal_name,
+        A.net_revenue,
+        A.gross_revenue,
+        A.imps,
+        NULL AS active_view_measured_impressions,
+        NULL AS active_view_viewed_impressions,
+        NULL AS bid_requests,
+        NULL AS bid_responses
+    FROM index_cal_dedupe A
+    LEFT JOIN prog_tag_map B
+    ON A.tag_site = B.tag_site_map
+    WHERE max_time IS NOT NULL
+),
+*/
+
+index_bid_prog_all_proxy AS (
+    SELECT
+        'Index CAL' AS source,
+        CAST(day AS TIMESTAMP) AS date,
+        'Index' AS partner,
+        '' AS tag_site,
+        'PMP' AS transaction_type,
+        '' AS ad_size_initial,
+        '' AS ad_size,
+        '' AS ad_type,
+        'HB' AS path_type,
+        '' AS device_type_initial,
+        '' AS device_type,
+        '' AS country_initial,
+        '' AS country,
+        '' AS dsp_initial,
+        '' AS buyer_initial,
+        '' AS advertiser_initial,
+        deal_id AS deal_id,
+        deal_name AS deal_name,
+        NULL AS net_revenue,
+        NULL AS gross_revenue,
+        NULL AS imps,
+        NULL AS active_view_measured_impressions,
+        NULL AS active_view_viewed_impressions,
+        bid_request AS bid_requests,
+        bids_returned AS bid_responses
+    FROM `meredith-switchboard.indexexchange.ix_pmp_bid_volume_202*`
+    WHERE day >= '2020-01-01'
+),
+
+index_final_unioned AS (
+    SELECT * FROM index_deduped
+    UNION ALL
+    SELECT * FROM index_bid_prog_all_proxy
+)
+
+SELECT * FROM index_final_unioned

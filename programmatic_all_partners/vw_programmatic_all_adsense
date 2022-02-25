@@ -1,0 +1,71 @@
+## view name: vw_programmatic_all_adsense
+## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
+## created by: bj.hollowell@meredith.com
+## Last modified on:
+## Last modified by:
+## Change log:
+##
+##
+## notes:
+##
+
+WITH
+
+adsense_base AS (
+    SELECT *
+    FROM `meredith-switchboard.adsense.adsense_*`
+    WHERE date >= '2020-01-01'
+),
+
+adsense_cleaned AS (
+    SELECT
+        'AdSense API' AS source,
+        CAST(date AS TIMESTAMP) AS date,
+        'AdSense' AS partner,
+        CONCAT('AdSense', ';', ad_unit_name) AS tag_site,
+        'Open' AS transaction_type,
+        --'' AS site,
+        --'' AS tier,
+        ad_unit_size_name AS ad_size_initial,
+        CASE
+            WHEN ad_unit_size_name LIKE '300x250'  THEN '300x250'
+            WHEN ad_unit_size_name LIKE '320x50'   THEN '320x50'
+            WHEN ad_unit_size_name LIKE '728x90'   THEN '728x90'
+            WHEN ad_unit_size_name LIKE '300x600'  THEN '300x600'
+            WHEN ad_unit_size_name LIKE '970x250'  THEN '970x250'
+            WHEN ad_unit_size_name LIKE '970x90'   THEN '970x90'
+            WHEN ad_unit_size_name LIKE '300x1050' THEN '300x1050'
+            ELSE 'Other'
+            END AS ad_size,
+        'Display' AS ad_type,
+        'AdSense' AS path_type,
+        platform_type_name AS device_type_initial,
+        CASE
+            WHEN platform_type_name LIKE '%Mobile%'  THEN 'MobileWeb'
+            WHEN platform_type_name LIKE '%mobile%'  THEN 'MobileWeb'
+            WHEN platform_type_name LIKE '%Tablets%' THEN 'Desktop'
+            WHEN platform_type_name LIKE '%Desktop%' THEN 'Desktop'
+            ELSE 'Other'
+            END AS device_type,
+        country_name AS country_initial,
+        CASE
+            WHEN country_name LIKE 'United States' THEN 'USA'
+            WHEN country_name LIKE 'N/A'           THEN 'Unknown'
+            ELSE 'XUS'
+            END AS country,
+        'AdSense' AS dsp_initial,
+        'AdSense' AS buyer_initial,
+        '' AS advertiser_initial,
+        '' AS deal_id,
+        '' AS deal_name,
+        earnings AS net_revenue,
+        (earnings / 0.675) AS gross_revenue,
+        individual_ad_impressions AS imps,
+        NULL AS active_view_measured_impressions,
+        NULL AS active_view_viewed_impressions,
+        NULL AS bid_requests,
+        NULL AS bid_responses
+    FROM adsense_base
+)
+
+SELECT * FROM adsense_cleaned
