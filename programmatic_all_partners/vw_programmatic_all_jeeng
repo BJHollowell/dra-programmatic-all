@@ -1,10 +1,10 @@
 ## view name: vw_programmatic_all_jeeng
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on: 2/14/22
+## Last modified on: 3/1/2022
 ## Last modified by: bj.hollowell@meredith.com
-## Change log: switched 'PowerInbox' to 'Jeeng'
-##
+## Change log:  3/1/2022 BJ amended the base steps to limit fields brought in, dedupe within that step and aggregate
+##              progall was taking too long to process and it was due to steps like those. this will cut down processing
 ##
 ## notes:
 ##
@@ -18,36 +18,32 @@ prog_tag_map AS (
     FROM `meredith-switchboard.summary_reports.programmatic_tag_mapping`
 ),
 
-jeeng_deduped  AS (
-    SELECT * FROM (
-        SELECT
-            _table_suffix AS table_num,
-            date,
-            advertiser,
-            SUM(revenue) AS revenue,
-            SUM(impressions) AS impressions,
-            SUM(total_clicks) AS total_clicks
-        FROM `meredith-switchboard.power_inbox.power_inbox_*`
-        GROUP BY
-            date,
-            advertiser,
-            _table_suffix) t1
-        INNER JOIN (
-            SELECT
-                MAX(_table_suffix) AS max_table_num,
-                date AS max_date
-            FROM `meredith-switchboard.power_inbox.power_inbox_*`
-            GROUP BY date) t2
-        ON t1.date = t2.max_date
-        AND t1.table_num = t2.max_table_num
-),
-
 jeeng_base AS (
     SELECT
-        *,
-        'Jeeng' AS tag_site
-    FROM jeeng_deduped
+        table_id,
+        date,
+        advertiser,
+        SUM(revenue) AS revenue,
+        SUM(impressions) AS impressions
+    FROM (
+        SELECT
+            _table_suffix AS table_id,
+            A.date,
+            advertiser,
+            revenue,
+            impressions
+        FROM `meredith-switchboard.power_inbox.power_inbox_*` A
+
+        INNER JOIN (
+            SELECT
+                date,
+                MAX(_table_suffix) AS max_table_id
+            FROM `meredith-switchboard.power_inbox.power_inbox_*`
+            GROUP BY 1 ) B
+        ON A.date = B.date AND A._table_suffix = B.max_table_id
+        )
     WHERE date >= '2020-01-01'
+    GROUP BY 1,2,3
 ),
 
 jeeng_cleaned AS (
@@ -55,7 +51,7 @@ jeeng_cleaned AS (
         'Jeeng Email' AS source,            ## formerly 'PI Email'
         CAST(date AS TIMESTAMP) AS date,
         'Jeeng' AS partner,                 ## formerly PowerInbox
-        tag_site,
+        'Jeeng' AS tag_site,
         'Open' AS transaction_type,
         --'Unallocated' AS site,
         --'No Tier' AS tier,
@@ -79,67 +75,7 @@ jeeng_cleaned AS (
         NULL AS active_view_viewed_impressions,
         NULL AS bid_requests,
         NULL AS bid_responses
-    FROM jeeng_base AS A
-
-    LEFT JOIN prog_tag_map AS B
-    ON A.tag_site = B.tag_site_map
-),
-
-jeeng_final AS (
-    SELECT
-        source,
-        date,
-        partner,
-        tag_site,
-        transaction_type,
-        --site,
-        --tier,
-        ad_size_initial,
-        ad_size,
-        ad_type,
-        path_type,
-        device_type_initial,
-        device_type,
-        country_initial,
-        country,
-        dsp_initial,
-        buyer_initial,
-        advertiser_initial,
-        deal_id,
-        deal_name,
-        sum(net_revenue) as net_revenue,
-        sum(gross_revenue) as gross_revenue,
-        sum(imps) as imps,
-        active_view_measured_impressions,
-        active_view_viewed_impressions,
-        bid_requests,
-        bid_responses
-    FROM jeeng_cleaned
-    GROUP BY
-        source,
-        date,
-        partner,
-        tag_site,
-        transaction_type,
-        --site,
-        --tier,
-        ad_size_initial,
-        ad_size,
-        ad_type,
-        path_type,
-        device_type_initial,
-        device_type,
-        country_initial,
-        country,
-        dsp_initial,
-        buyer_initial,
-        advertiser_initial,
-        deal_id,
-        deal_name,
-        active_view_measured_impressions,
-        active_view_viewed_impressions,
-        bid_requests,
-        bid_responses
+    FROM jeeng_base
 )
 
-SELECT * FROM jeeng_final
+SELECT * FROM jeeng_cleaned

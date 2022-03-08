@@ -1,10 +1,10 @@
 ## view name: vw_programmatic_all_roundel
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on:
-## Last modified by: andy.bieber@meredith.com
-## Change log: 2/11/2022 Andy added size logic: WHEN size LIKE '%250x250%'   THEN '300x250'
-##
+## Last modified on: 2/28/2022
+## Last modified by: bj.hollowell@meredith.com
+## Change log:  2/28/2022 BJ amended the base steps to limit fields brought in, dedupe within that step and aggregate
+##              progall was taking too long to process and it was due to steps like those. this will cut down processing
 ##
 ## notes:
 ##
@@ -13,24 +13,44 @@ WITH
 
 roundel_brands_base AS (
     SELECT
-        *,
-        _Table_Suffix AS table_num
-    FROM `meredith-switchboard.roundel.roundel_buyer_and_brand_raw_*`
-    WHERE day >= '2020-01-01'
-),
-
-roundel_brands_deduped AS (
-    SELECT
-        * EXCEPT (table_num, file_count, file_max)
+        table_num,
+        day,
+        domain,
+        size,
+        device_type,
+        dsp_name,
+        buyer_name,
+        brand_name,
+        deal_id,
+        deal_name,
+        SUM(deal_net_revenue) AS deal_net_revenue,
+        SUM(deal_impressions) AS deal_impressions
     FROM (
         SELECT
-            *,
-            COUNT(DISTINCT(table_num)) OVER (PARTITION BY day) AS file_count,
-            MAX(table_num) OVER (PARTITION BY day) AS file_max
-        FROM roundel_brands_base
+            _table_suffix AS table_num,
+            A.day,
+            domain,
+            size,
+            device_type,
+            dsp_name,
+            buyer_name,
+            brand_name,
+            deal_id,
+            deal_name,
+            deal_net_revenue,
+            deal_impressions
+        FROM `meredith-switchboard.roundel.roundel_buyer_and_brand_raw_*` A
+
+        INNER JOIN (
+            SELECT
+                day,
+                MAX(_table_suffix) AS max_table_num
+            FROM `meredith-switchboard.roundel.roundel_buyer_and_brand_raw_*`
+            GROUP BY 1 ) B
+        ON A.day = B.day AND A._table_suffix =B.max_table_num
     )
-    WHERE
-        (file_count = 1) OR (file_count > 1 AND table_num = file_max)
+    WHERE day >= '2020-01-01'
+    GROUP BY 1,2,3,4,5,6,7,8,9,10
 ),
 
 roundel_brands_cleaned AS (
@@ -90,29 +110,45 @@ roundel_brands_cleaned AS (
         NULL AS active_view_viewed_impressions,
         NULL AS bid_requests,
         NULL AS bid_responses
-    FROM roundel_brands_deduped
+    FROM roundel_brands_base
 ),
 
 roundel_deals_base AS (
     SELECT
-        *,
-        _Table_Suffix AS table_num
-    FROM `meredith-switchboard.roundel.roundel_deals_activity_raw_*`
-    WHERE day >= '2020-01-01'
-),
-
-roundel_deals_deduped AS (
-    SELECT
-        * EXCEPT(table_num, file_count, file_max)
+        table_num,
+        day,
+        domain,
+        size,
+        device_type,
+        country,
+        deal_id,
+        deal_name,
+        SUM(bid_request) AS bid_request,
+        SUM(bid_chosen) AS bid_chosen
     FROM (
         SELECT
-            *,
-            COUNT(DISTINCT(table_num)) OVER (PARTITION BY day) AS file_count,
-            MAX(table_num) OVER (PARTITION BY day) AS file_max
-        FROM roundel_deals_base
+            _table_suffix AS table_num,
+            A.day,
+            domain,
+            size,
+            device_type,
+            country,
+            deal_id,
+            deal_name,
+            bid_request,
+            bid_chosen
+        FROM `meredith-switchboard.roundel.roundel_deals_activity_raw_*` A
+
+        INNER JOIN (
+            SELECT
+                day,
+                MAX(_table_suffix) AS max_table_num
+            FROM `meredith-switchboard.roundel.roundel_deals_activity_raw_*`
+            GROUP BY 1 ) B
+        ON A.day = B.day AND A._table_suffix =B.max_table_num
     )
-    WHERE
-        (file_count = 1) OR (file_count > 1 AND table_num = file_max)
+    WHERE day >= '2020-01-01'
+    GROUP BY 1,2,3,4,5,6,7,8
 ),
 
 roundel_deals_cleaned AS (
@@ -172,7 +208,7 @@ roundel_deals_cleaned AS (
         NULL AS active_view_viewed_impressions,
         bid_request AS bid_requests,
         bid_chosen AS bid_responses
-    FROM roundel_deals_deduped
+    FROM roundel_deals_base
 ),
 
 roundel_combined AS (

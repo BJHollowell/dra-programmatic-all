@@ -1,9 +1,9 @@
 ## view name: vw_programmatic_all_amazon_pmp
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on:
-## Last modified by:
-## Change log:
+## Last modified on: 3/1/2022
+## Last modified by: bj.hollowell@meredith.com
+## Change log: limiting fields pulled in from raw data source
 ##
 ##
 ## notes:
@@ -12,7 +12,20 @@
 WITH
 
 amazon_pmp_base AS (
-    SELECT *
+    SELECT
+        date,
+        site,
+        ad_slot,
+        size,
+        media_type,
+        device_type,
+        country,
+        buyer,
+        deal,
+        earnings,
+        impressions,
+        qualified_requests,
+        bids_submitted
     FROM `meredith-switchboard.amazon.deals_health_*`
     WHERE date >= '2020-01-01'
 ),

@@ -46,7 +46,7 @@ index_base AS (
 index_OB_base AS (
     SELECT
         *,
-        _table_suffix AS table_num
+        _table_suffix AS table_id
     FROM `meredith-switchboard.programmatic_all.index_exchange_OB_programmatic_all_*`
 ),
 

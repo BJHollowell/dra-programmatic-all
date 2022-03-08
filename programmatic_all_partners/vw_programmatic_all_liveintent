@@ -1,9 +1,9 @@
 ## view name: vw_programmatic_all_liveintent
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on:
-## Last modified by:
-## Change log:
+## Last modified on: 3/1/2022
+## Last modified by: bj.hollowell@meredith.com
+## Change log: limiting fields pulled in from raw data source
 ##
 ##
 ## notes:
@@ -19,7 +19,14 @@ prog_tag_map AS (
 ),
 
 liveintent_base AS (
-    SELECT *
+    SELECT
+        timestamp,
+        Publisher,
+        Section,
+        Advertiser_Domain,
+        Publisher_Revenue,
+        Impressions,
+        Demand_Type
     FROM `meredith-switchboard.liveintent.liveintent_2*`
     WHERE timestamp >= '2020-01-01'
 ),

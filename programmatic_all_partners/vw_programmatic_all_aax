@@ -1,10 +1,10 @@
 ## view name: vw_programmatic_all_aax
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on:
-## Last modified by:
-## Change log:
-##
+## Last modified on: 3/1/2022
+## Last modified by: bj.hollowell@meredith.com
+## Change log:  3/1/2022 BJ amended the base steps to limit fields brought in, dedupe within that step and aggregate
+##              progall was taking too long to process and it was due to steps like those. this will cut down processing
 ##
 ## notes:
 ##
@@ -13,15 +13,44 @@ WITH
 
 aax_base AS (
     SELECT
-        *,
-        _table_suffix AS table_id
-    FROM `meredith-switchboard.aax.aax_report_*`
+        table_id,
+        stats_date,
+        domain_name,
+        creative_name,
+        size,
+        device_name,
+        country_name,
+        provider_name,
+        SUM(audited_pub_revenue) AS audited_pub_revenue,
+        SUM(impressions) AS impressions
+    FROM (
+        SELECT
+            _table_suffix AS table_id,
+            A.stats_date,
+            domain_name,
+            creative_name,
+            size,
+            device_name,
+            country_name,
+            provider_name,
+            audited_pub_revenue,
+            impressions
+        FROM `meredith-switchboard.aax.aax_report_*` A
+
+        INNER JOIN (
+            SELECT
+                stats_date,
+                MAX(_table_suffix) AS max_table_id
+            FROM `meredith-switchboard.aax.aax_report_*`
+            GROUP BY 1) B
+        ON A.stats_date = B.stats_date AND A._table_suffix = B.max_table_id
+    )
     WHERE stats_date >= '2020-01-01'
+    GROUP BY 1,2,3,4,5,6,7,8
 ),
 
 aax_cleaned AS (
     SELECT
-        table_id,
         'AAX API' AS source,
         CAST(stats_date AS TIMESTAMP) AS date,
         'AAX' AS partner,
@@ -59,18 +88,6 @@ aax_cleaned AS (
         NULL AS bid_repsonses
     FROM aax_base
     WHERE provider_name = 'AAX'
-),
-
-aax_deduped AS (
-    SELECT * FROM aax_cleaned
-    INNER JOIN (
-    SELECT
-        date AS date_join,
-        MAX(table_id) AS table_id_join
-    FROM aax_cleaned
-    GROUP BY date) dedupe
-    ON (aax_cleaned.date = dedupe.date_join AND aax_cleaned.table_id = dedupe.table_id_join)
 )
 
-SELECT * EXCEPT(table_id, table_id_join, date_join)
-FROM aax_deduped
+SELECT * FROM aax_cleaned

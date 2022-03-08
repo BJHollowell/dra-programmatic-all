@@ -20,23 +20,23 @@ prog_tag_map AS (
 
 medianet_channelwise_old AS (
     SELECT
-        '' AS reoprt_date,
         date AS date,
-        '' AS adtag,
-        NULL AS adtag_id,
         channelName AS channel,
-        NULL AS channel_id,
-        '' AS site,
-        impressions AS impressions,
         estimatedRevenue AS estimated_revenue,
-        NULL AS viewable_rpm,
-        NULL AS viewable_impression_percent,
-        rpm AS rpm
+        impressions AS impressions,
     FROM `meredith-switchboard.media_net.channelwise_*`
+    WHERE date >= '2020-01-01'
 ),
 
 medianet_channelwise_base AS (
-    SELECT * FROM `meredith-switchboard.media_net.medianet_api_report_*`
+    SELECT
+        date,
+        channel,
+        estimated_revenue,
+        impressions
+    FROM `meredith-switchboard.media_net.medianet_api_report_*`
+    WHERE date >= '2020-01-01'
+
     UNION ALL
     SELECT * FROM medianet_channelwise_old
 ),
@@ -80,8 +80,8 @@ medianet_channelwise_mapped AS (
         partner,
         tag_site,
         transaction_type,
-        --raw.site,
-        --raw.tier,
+        --A.site,
+        --A.tier,
         ad_size_initial,
         B.adsize AS ad_size,
         ad_type,
@@ -109,7 +109,17 @@ medianet_channelwise_mapped AS (
 ),
 
 medianet_deals_base AS (
-    SELECT * FROM `meredith-switchboard.media_net.medianet_deal_report_*`
+    SELECT
+        report_date,
+        creative_name,
+        size,
+        device_name,
+        country_name,
+        advertiser_hostname,
+        audited_pub_revenue,
+        impressions
+    FROM `meredith-switchboard.media_net.medianet_deal_report_*`
+    WHERE report_date >= '2020-01-01'
 ),
 
 medianet_deals_cleaned AS (
@@ -155,4 +165,3 @@ medianet_final AS (
 )
 
 SELECT * FROM medianet_final
-WHERE Date >= '2020-01-01'

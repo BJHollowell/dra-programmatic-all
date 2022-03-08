@@ -1,10 +1,10 @@
 ## view name: vw_programmatic_all_rogers
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on:
-## Last modified by:
-## Change log:
-##
+## Last modified on: 3/8/2022
+## Last modified by: bj.hollowell@meredith.com
+## Change log:  amending the dedupe logic for better efficiency and limiting the fields brought in from raw data.  Second level of dedupe was added
+##              as well due to Rogers sending double files most days going all the way back.
 ##
 ## notes:
 ## This view has two different base, cleaned, deduped portions that get unioned into a final output.
@@ -12,17 +12,61 @@
 
 WITH
 
+rogers_monthly_deduped_1 AS (
+    SELECT
+        _table_suffix AS table_id,
+        * EXCEPT(join_date, max_table_id)
+    FROM `meredith-switchboard.rogers.rogers_meredith_01_monthly_*` A
+    INNER JOIN (
+        SELECT
+            Date as join_date,
+            MAX(_table_suffix) AS max_table_id
+        FROM `meredith-switchboard.rogers.rogers_meredith_01_monthly_*`
+        GROUP BY 1 ) B
+    ON A.date = B.join_date AND A._table_suffix = B.max_table_id
+    WHERE A.date >= '2020-01-01'
+),
+
+rogers_monthly_deduped_2 AS (
+    SELECT
+        table_id,
+        Date,
+        Ad_unit_1,
+        Ad_unit_2,
+        Ad_unit_3,
+        Ad_unit_4,
+        Device_category,
+        Creative_size,
+        Line_item_type,
+        Ad_unit_ID_1,
+        Ad_unit_ID_2,
+        Ad_unit_ID_3,
+        Ad_unit_ID_4,
+        Device_category_ID,
+        Creative_Size2,
+        Date_string,
+        MAX(Total_CPM_CPC_CPD_and_vCPM_revenue_CA_) AS Total_CPM_CPC_CPD_and_vCPM_revenue_CA_,
+        MAX(Total_impressions) AS Total_impressions
+    FROM rogers_monthly_deduped_1
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16
+),
+
 rogers_monthly_base AS (
     SELECT
-        *,
-        _table_suffix AS table_num,
-    FROM `meredith-switchboard.rogers.rogers_meredith_01_monthly_*`
-    WHERE date >= '2020-01-01'
+        table_id,
+        Date,
+        Ad_unit_1,
+        Ad_unit_2,
+        Creative_Size2,
+        Device_category,
+        SUM(Total_CPM_CPC_CPD_and_vCPM_revenue_CA_) AS Total_CPM_CPC_CPD_and_vCPM_revenue_CA_,
+        SUM(Total_impressions) AS Total_impressions
+    FROM rogers_monthly_deduped_2
+    GROUP BY 1,2,3,4,5,6
 ),
 
 rogers_monthly_cleaned AS (
     SELECT
-        table_num,
         'Rogers ROM Email' AS source,
         CAST(Date AS TIMESTAMP) AS date,
         'Rogers' AS partner,
@@ -34,7 +78,7 @@ rogers_monthly_cleaned AS (
         CASE
             WHEN Creative_Size2 = '300x250'  THEN '300x250'
             WHEN Creative_Size2 = '320x50'   THEN '320x50'
-            WHEN Creative_Size2 = '728x90'   THEN '720x90'
+            WHEN Creative_Size2 = '728x90'   THEN '728x90'
             WHEN Creative_Size2 = '300x600'  THEN '300x600'
             WHEN Creative_Size2 = '300x1050' THEN '300x1050'
             WHEN Creative_Size2 = '160x600'  THEN '160x600'
@@ -65,8 +109,8 @@ rogers_monthly_cleaned AS (
         '' AS deal_id,
         '' AS deal_name,
         CASE
-            WHEN Date <= '2020-03-31'       THEN (Total_CPM_CPC_CPD_and_vCPM_revenue_CA_ * 0.7) * 0.7
-            WHEN Date(Date) >= '2021-01-01' THEN (Total_CPM_CPC_CPD_and_vCPM_revenue_CA_ * 0.7) * 0.7
+            WHEN Date <= '2020-03-31' THEN (Total_CPM_CPC_CPD_and_vCPM_revenue_CA_ * 0.7) * 0.7
+            WHEN Date >= '2021-01-01' THEN (Total_CPM_CPC_CPD_and_vCPM_revenue_CA_ * 0.7) * 0.7
             ELSE (Total_CPM_CPC_CPD_and_vCPM_revenue_CA_ * 0.7) * 0.75
             END AS net_revenue,
         (Total_CPM_CPC_CPD_and_vCPM_revenue_CA_ * 0.7) AS gross_revenue,
@@ -76,63 +120,46 @@ rogers_monthly_cleaned AS (
         NULL AS bid_requests,
         NULL AS bid_responses
     FROM rogers_monthly_base
-    GROUP BY
-        table_num,
-        source,
-        date,
-        partner,
-        tag_site,
-        transaction_type,
-        --site,
-        --tier,
-        ad_size_initial,
-        ad_size,
-        ad_type,
-        path_type,
-        device_type_initial,
-        device_type,
-        country_initial,
-        country,
-        dsp_initial,
-        buyer_initial,
-        advertiser_initial,
-        deal_id,
-        deal_name,
-        net_revenue,
-        gross_revenue,
-        imps,
-        active_view_measured_impressions,
-        active_view_viewed_impressions,
-        bid_requests,
-        bid_responses
-),
-
-rogers_monthly_deduped AS (
-    SELECT
-        * EXCEPT(table_num, file_count, file_max)
-    FROM (
-        SELECT
-            *,
-            COUNT(DISTINCT(table_num)) OVER (PARTITION BY Date) AS file_count,
-            MAX(table_num) OVER (PARTITION BY Date) AS file_max
-        FROM rogers_monthly_cleaned
-    )
-    WHERE (file_count = 1) OR (file_count > 1 AND table_num = file_max)
 ),
 
 rogers_allrecipes_base AS (
     SELECT
-        *,
-        _table_suffix AS table_num
-    FROM `meredith-switchboard.rogers.rogers_allrecipes_*`
+        table_id,
+        Date,
+        Ad_unit_1,
+        Ad_unit_2,
+        Creative_Size,
+        Device_category,
+        SUM(Total_CPM_CPC_CPD_and_vCPM_revenue_CA_dollars) AS Total_CPM_CPC_CPD_and_vCPM_revenue_CA_dollars,
+        SUM(Total_impressions) AS Total_impressions
+    FROM (
+        SELECT
+            _table_suffix AS table_id,
+            A.Date,
+            Ad_unit_1,
+            Ad_unit_2,
+            Creative_Size,
+            Device_category,
+            Total_CPM_CPC_CPD_and_vCPM_revenue_CA_dollars,
+            Total_impressions
+        FROM `meredith-switchboard.rogers.rogers_allrecipes_*` A
+
+        INNER JOIN (
+            SELECT
+                Date,
+                MAX(_table_suffix) AS max_table_id
+            FROM `meredith-switchboard.rogers.rogers_allrecipes_*`
+            GROUP BY 1 ) B
+        ON A.date = B.date AND A._table_suffix = B.max_table_id
+    )
     WHERE
         date >= '2020-01-01'
         AND date < '2022-02-16'
+    GROUP BY 1,2,3,4,5,6
 ),
 
 rogers_allrecipes_cleaned AS (
     SELECT
-        table_num,
         'Rogers AR Email' AS source,
         CAST(Date AS TIMESTAMP) AS date,
         'Rogers' AS partner,
@@ -186,22 +213,8 @@ rogers_allrecipes_cleaned AS (
         NULL AS bid_requests,
         NULL AS bid_responses
     FROM rogers_allrecipes_base
-),
-
-rogers_allrecipes_deduped AS (
-    SELECT
-        * EXCEPT(table_num, file_count, file_max)
-    FROM (
-        SELECT
-            *,
-            COUNT(DISTINCT(table_num)) OVER (PARTITION BY Date) AS file_count,
-            MAX(table_num) OVER (PARTITION BY Date) AS file_max
-        FROM rogers_allrecipes_cleaned
-    )
-    WHERE (file_count = 1) OR (file_count > 1 AND table_num = file_max)
 )
 
-
-SELECT * FROM rogers_monthly_deduped
+SELECT * FROM rogers_monthly_cleaned
 UNION ALL
-SELECT * FROM rogers_allrecipes_deduped
+SELECT * FROM rogers_allrecipes_cleaned

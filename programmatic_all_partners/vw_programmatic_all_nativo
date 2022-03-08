@@ -1,10 +1,10 @@
 ## view name: vw_programmatic_all_nativo
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on:
-## Last modified by:
-## Change log:
-##
+## Last modified on: 3/1/2022
+## Last modified by: bj.hollowell@meredith.com
+## Change log:  3/1/2022 BJ amended the base steps to limit fields brought in, dedupe within that step and aggregate
+##              progall was taking too long to process and it was due to steps like those. this will cut down processing
 ##
 ## notes:
 ##
@@ -13,23 +13,40 @@ WITH
 
 nativo_base AS (
     SELECT
-        *,
-        _table_suffix AS table_num
-    FROM `meredith-switchboard.nativo.demand_*`
-    WHERE Date >= '2020-01-01'
-),
-
-nativo_deduped AS (
-    SELECT
-        * EXCEPT(table_num, file_count, file_max)
+        table_id,
+        date,
+        publication_name,
+        integration_type_name,
+        device_type_name,
+        country_name,
+        feed_relay_provider_name,
+        demand_advertiser_name,
+        SUM(merged_revenue) AS merged_revenue,
+        SUM(vcpm_impression) AS vcpm_impression
     FROM (
         SELECT
-            *,
-            COUNT(DISTINCT(table_num)) OVER (PARTITION BY Date) AS file_count,
-            MAX(table_num) OVER (PARTITION BY Date) AS file_max
-        FROM nativo_base
+            _table_suffix AS table_id,
+            A.date,
+            publication_name,
+            integration_type_name,
+            device_type_name,
+            country_name,
+            feed_relay_provider_name,
+            demand_advertiser_name,
+            merged_revenue,
+            vcpm_impression
+        FROM `meredith-switchboard.nativo.demand_*` A
+
+        INNER JOIN (
+            SELECT
+                date,
+                MAX(_table_suffix) AS max_table_id
+            FROM `meredith-switchboard.nativo.demand_*`
+            GROUP BY 1 ) B
+        ON A.date = B.date AND A._table_suffix = B.max_table_id
     )
-    WHERE (file_count = 1) OR (file_count > 1 AND table_num = file_max)
+    WHERE date >= '2020-01-01'
+    GROUP BY 1,2,3,4,5,6,7,8
 ),
 
 nativo_cleaned AS (
@@ -80,7 +97,7 @@ nativo_cleaned AS (
         NULL AS active_view_viewed_impressions,
         NULL AS bid_requests,
         NULL AS bid_responses
-    FROM nativo_deduped
+    FROM nativo_base
 )
 
 SELECT * FROM nativo_cleaned

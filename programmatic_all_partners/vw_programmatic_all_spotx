@@ -1,10 +1,10 @@
 ## view name: vw_programmatic_all_spotx
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on:
-## Last modified by:
-## Change log:
-##
+## Last modified on: 3/1/2022
+## Last modified by: bj.hollowell@meredith.com
+## Change log:  3/1/2022 BJ amended the base steps to limit fields brought in, dedupe within that step and aggregate
+##              progall was taking too long to process and it was due to steps like those. this will cut down processing
 ##
 ## notes:
 ##
@@ -13,15 +13,48 @@ WITH
 
 spotx_base AS (
     SELECT
-        *,
-        _table_suffix AS table_num
-    FROM `meredith-switchboard.spotx.spotx_custom_report_*`
+        table_num,
+        date,
+        app_name,
+        deal_id,
+        channel_name,
+        country,
+        ad_partner,
+        advertiser_domain,
+        deal_name,
+        SUM(net_revenue_usd) AS net_revenue_usd,
+        SUM(gross_revenue_usd) AS gross_revenue_usd,
+        SUM(impressions) AS impressions
+    FROM (
+        SELECT
+            _table_suffix AS table_num,
+            A.date,
+            app_name,
+            deal_id,
+            channel_name,
+            country,
+            ad_partner,
+            advertiser_domain,
+            deal_name,
+            net_revenue_usd,
+            gross_revenue_usd,
+            impressions
+        FROM `meredith-switchboard.spotx.spotx_custom_report_*` A
+
+        INNER JOIN (
+            SELECT
+                date,
+                MAX(_table_suffix) AS max_table_num
+            FROM `meredith-switchboard.spotx.spotx_custom_report_*`
+            GROUP BY 1 ) B
+        ON A.date = B.date AND A._table_suffix = B.max_table_num
+    )
     WHERE date >= '2020-01-01'
+    GROUP BY 1,2,3,4,5,6,7,8,9
 ),
 
 spotx_cleaned AS (
     SELECT
-        table_num,
         'SpotX custom API' AS source,
         CAST(date AS TIMESTAMP) AS date,
         'SpotX' AS partner,
@@ -64,19 +97,6 @@ spotx_cleaned AS (
         NULL AS bid_requests,
         NULL AS bid_responses
     FROM spotx_base
-),
-
-spotx_deduped AS (
-    SELECT
-        * EXCEPT(table_num, file_count, file_max)
-    FROM (
-        SELECT
-            *,
-            COUNT(DISTINCT(table_num)) OVER (PARTITION BY Date) AS file_count,
-            MAX(table_num) OVER (PARTITION BY Date) AS file_max
-        FROM spotx_cleaned
-    )
-    WHERE (file_count = 1) OR (file_count > 1 AND table_num = file_max)
 )
 
-SELECT * FROM spotx_deduped
+SELECT * FROM spotx_cleaned

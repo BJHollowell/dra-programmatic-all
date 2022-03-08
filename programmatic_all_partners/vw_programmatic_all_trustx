@@ -1,10 +1,10 @@
 ## view name: vw_programmatic_all_trustx
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on:
-## Last modified by: andy.bieber@meredith.com
-## Change log: 2/11/2022 Andy added creative size case statement to the old reporting flow
-##
+## Last modified on: 2/28/2022
+## Last modified by: bj.hollowell@meredith.com
+## Change log:  2/28/2022 BJ amended the base steps to limit fields brought in, dedupe within that step and aggregate
+##              progall was taking too long to process and it was due to steps like those. this will cut down processing
 ##
 ## notes:
 ##
@@ -20,17 +20,83 @@ prog_tag_map AS (
 
 trustx_base_old AS (
     SELECT
-        *,
-        _table_suffix AS table_num
-    FROM `meredith-switchboard.trustx.trustx_2*`
-    WHERE day >= '2020-01-01'
+        table_num,
+        day,
+        ad_unit_name,
+        creative_size,
+        country,
+        dsp_name,
+        buyer_id_name,
+        landing_page_domain,
+        SUM(pub_payout) AS pub_payout,
+        SUM(imps) AS imps
+    FROM (
+        SELECT
+            _table_suffix AS table_num,
+            A.day,
+            ad_unit_name,
+            creative_size,
+            country,
+            dsp_name,
+            buyer_id_name,
+            landing_page_domain,
+            pub_payout,
+            imps
+        FROM `meredith-switchboard.trustx.trustx_2*` A
+
+        INNER JOIN (
+            SELECT
+                day,
+                MAX(_table_suffix) AS max_table_num
+            FROM `meredith-switchboard.trustx.trustx_2*`
+            GROUP BY 1 ) B
+        ON A.day = B.day AND A._table_suffix = B.max_table_num
+    )
+    WHERE day BETWEEN '2020-01-01' AND '2021-11-15'
+    GROUP BY 1,2,3,4,5,6,7,8
 ),
 
 trustx_base_new AS (
     SELECT
-        *,
-        _table_suffix AS table_num
-    FROM `meredith-switchboard.trustx.trustx_v2_*`
+        table_num,
+        date,
+        AD_UNIT_NAME,
+        CREATIVE_SIZE,
+        DSP_NAME,
+        BUYER_NAME,
+        LANDING_PAGE,
+        DEAL_ID,
+        DEAL_NAME,
+        SUM(adv_payout_billable) AS adv_payout_billable,
+        SUM(billable_events) AS billable_events,
+        SUM(yes_bids) AS yes_bids,
+        SUM(no_bids) AS no_bids
+    FROM (
+        SELECT
+            _table_suffix AS table_num,
+            A.date,
+            AD_UNIT_NAME,
+            CREATIVE_SIZE,
+            DSP_NAME,
+            BUYER_NAME,
+            LANDING_PAGE,
+            DEAL_ID,
+            DEAL_NAME,
+            adv_payout_billable,
+            billable_events,
+            yes_bids,
+            no_bids
+        FROM `meredith-switchboard.trustx.trustx_v2_*` A
+
+        INNER JOIN (
+            SELECT
+                date,
+                MAX(_table_suffix) AS max_table_num
+            FROM `meredith-switchboard.trustx.trustx_v2_*`
+            GROUP BY 1 ) B
+        ON A.date = B.date AND A._table_suffix = B.max_table_num
+    )
+    GROUP BY 1,2,3,4,5,6,7,8,9
 ),
 
 trustx_cleaned_old AS (
@@ -143,19 +209,6 @@ trustx_unioned AS (
     SELECT * FROM trustx_cleaned_old
 ),
 
-trustx_deduped AS (
-    SELECT
-        * EXCEPT(table_num, file_count, file_max)
-    FROM (
-        SELECT
-            *,
-            COUNT(DISTINCT(table_num)) OVER (PARTITION BY Date) AS file_count,
-            MAX(table_num) OVER (PARTITION BY Date) AS file_max
-        FROM trustx_unioned
-    )
-    WHERE (file_count = 1) OR (file_count > 1 AND table_num = file_max)
-),
-
 trustx_mapped AS (
     SELECT
         A.source,
@@ -185,7 +238,7 @@ trustx_mapped AS (
         A.active_view_viewed_impressions,
         A.bid_requests,
         A.bid_responses
-    FROM trustx_deduped AS A
+    FROM trustx_unioned AS A
 
     LEFT JOIN prog_tag_map AS B
     ON A.tag_site = B.tag_site_map

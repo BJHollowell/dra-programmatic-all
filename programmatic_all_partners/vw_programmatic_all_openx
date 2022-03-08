@@ -1,10 +1,10 @@
 ## view name: vw_programmatic_all_openx
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on:
-## Last modified by:
-## Change log:
-##
+## Last modified on: 3/1/2022
+## Last modified by: bj.hollowell@meredith.com
+## Change log:  3/1/2022 BJ amended the base steps to limit fields brought in, dedupe within that step and aggregate
+##              progall was taking too long to process and it was due to steps like those. this will cut down processing
 ##
 ## notes:
 ##
@@ -13,11 +13,51 @@ WITH
 
 openx_base AS (
     SELECT
-        *,
-        CONCAT(adWidth, ';', adHeight) AS ad_size,
-        _table_suffix AS table_id
-    FROM `meredith-switchboard.openx.openx_api_*`
+        day,
+        pageDomain,
+        publisherAdUnitName,
+        publisherAccountName,
+        userDeviceType,
+        userGeoCountry,
+        demandPartnerAccountName,
+        buyerName,
+        openXBrandName,
+        privateMarketplacePublisherDealId,
+        privateMarketplacePublisherDealName,
+        ad_size,
+        table_id,
+        SUM(marketPublisherRevenueinPCoin) AS marketPublisherRevenueinPCoin,
+        SUM(marketImpressions) AS marketImpressions
+    FROM (
+        SELECT
+            A.day,
+            pageDomain,
+            publisherAdUnitName,
+            publisherAccountName,
+            userDeviceType,
+            userGeoCountry,
+            demandPartnerAccountName,
+            buyerName,
+            openXBrandName,
+            privateMarketplacePublisherDealId,
+            privateMarketplacePublisherDealName,
+            marketPublisherRevenueinPCoin,
+            marketImpressions,
+            CONCAT(adWidth, ';', adHeight) AS ad_size,
+            _table_suffix AS table_id
+        FROM `meredith-switchboard.openx.openx_api_*` A
+
+        INNER JOIN (
+            SELECT
+                day,
+                MAX(_table_suffix) AS max_table_id
+            FROM `meredith-switchboard.openx.openx_api_*`
+            GROUP BY 1 ) B
+        ON A.day = B.day AND A._table_suffix = B.max_table_id
+    ## OpenX stopped sending multiple dates in each file back in Sept. 2020, but deduping is needed going back to those dates.
+    )
     WHERE day >= '2020-01-01'
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13
 ),
 
 openx_cleaned AS (
@@ -95,18 +135,6 @@ openx_cleaned AS (
         NULL AS bid_requests,
         NULL AS bid_repsonses
     FROM openx_base
-),
-
-## OpenX stopped sending multiple dates in each file back in Sept. 2020, but deduping is needed going back to those dates.
-openx_deduped AS (
-    SELECT * FROM openx_cleaned
-    INNER JOIN (
-    SELECT
-        date AS date_join,
-        MAX(table_id) AS table_id_join
-    FROM openx_cleaned
-    GROUP BY date ) dedupe
-    ON (openx_cleaned.date = dedupe.date_join AND openx_cleaned.table_id = dedupe.table_id_join)
 )
 
-SELECT * EXCEPT(table_id, date_join, table_id_join) FROM openx_deduped
+SELECT * FROM openx_cleaned

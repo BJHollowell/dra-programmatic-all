@@ -1,9 +1,9 @@
 ## view name: vw_programmatic_all_triplelift
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on:
-## Last modified by:
-## Change log:
+## Last modified on: 3/2/2022
+## Last modified by: bj.hollowell@meredith.com
+## Change log: limiting fields pulled in from raw data source
 ##
 ##
 ## notes:
@@ -20,9 +20,18 @@ prog_tag_map AS (
 
 triplelift_base AS (
     SELECT
-        *,
-        CONCAT('TripleLift',';',Publisher_name,';',Placement_name,';',supply_source) AS tag_site
-        -- Partner + ";" publisher_name + ";" + placement_name + ";" + supply source
+        report_date,
+        Publisher_name,
+        Placement_name,
+        supply_source,
+        deal_name,
+        device_type,
+        country_name,
+        buyer_member,
+        brand,
+        deal_code,
+        revenue,
+        rendered
     FROM `meredith-switchboard.triplelift.triplelift_api_*`
     WHERE report_date >= '2020-01-01'
 ),
@@ -32,7 +41,7 @@ triplelift_cleaned AS (
         'TripleLift API' AS source,
         CAST(report_date AS TIMESTAMP) AS date,
         'TripleLift' AS partner,
-        tag_site,
+        CONCAT('TripleLift',';',Publisher_name,';',Placement_name,';',supply_source) AS tag_site,
         --site,
         --'Unknown' AS tier,
         CASE
@@ -42,8 +51,7 @@ triplelift_cleaned AS (
             ELSE 'PMP'
             END AS transaction_type,
         '' AS ad_size_initial,
-        map.adsize AS ad_size,
-        -- if placement name contains 'Meredith_video'' then 'Video'; if placement name contains 'android' then 'App'; if 'supply_source'' ="Direct" then ""NonGam Display""; if not them "Display"
+        '' AS ad_size,
         CASE
             WHEN placement_name LIKE '%Meredith_video%' THEN 'Video'
             WHEN placement_name LIKE '%android%'        THEN 'App'
@@ -62,7 +70,6 @@ triplelift_cleaned AS (
             ELSE 'Unknown'
             END AS device_type,
         country_name as country_initial,
-        -- if 'country_name' = "United States" then "USA"; if 'Country' = "N/A" then "Unknown"; if 'Country' is NOT "United States" OR "N/A" then "XUS"
         CASE
             WHEN country_name LIKE '%United States%' THEN 'USA'
             WHEN country_name IS NULL                THEN 'Unknown'
@@ -81,10 +88,7 @@ triplelift_cleaned AS (
         NULL AS active_view_viewed_impressions,
         NULL AS bid_requests,
         NULL AS bid_responses
-    FROM triplelift_base AS raw
-
-    LEFT JOIN prog_tag_map AS map
-    ON raw.tag_site = map.tag_site_map
+    FROM triplelift_base
 ),
 
 triplelift_final AS (
@@ -97,13 +101,13 @@ triplelift_final AS (
         --site,
         --tier,
         ad_size_initial,
-        ad_size,
+        B.adsize AS ad_size,
         ad_type,
         path_type,
         device_type_initial,
         device_type,
         country_initial,
-        country,
+        A.country,
         dsp_initial,
         buyer_initial,
         advertiser_initial,
@@ -112,36 +116,16 @@ triplelift_final AS (
         SUM(net_revenue) AS net_revenue,
         SUM(gross_revenue) AS gross_revenue,
         SUM(imps) AS imps,
-        active_view_measured_impressions,
-        active_view_viewed_impressions,
-        bid_requests,
-        bid_responses
-    FROM triplelift_cleaned
-    GROUP BY
-        source,
-        date,
-        partner,
-        tag_site,
-        transaction_type,
-        --site,
-        --tier,
-        ad_size_initial,
-        ad_size,
-        ad_type,
-        path_type,
-        device_type,
-        device_type_initial,
-        country_initial,
-        country,
-        dsp_initial,
-        buyer_initial,
-        advertiser_initial,
-        deal_id,
-        deal_name,
-        active_view_measured_impressions,
-        active_view_viewed_impressions,
-        bid_requests,
-        bid_responses
+        SUM(active_view_measured_impressions) AS active_view_measured_impressions,
+        SUM(active_view_viewed_impressions) AS active_view_viewed_impressions,
+        SUM(bid_requests) AS bid_requests,
+        SUM(bid_responses) AS bid_responses
+    FROM triplelift_cleaned A
+
+    LEFT JOIN prog_tag_map B
+    ON A.tag_site = B.tag_site_map
+
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18
 )
 
 SELECT * FROM triplelift_final

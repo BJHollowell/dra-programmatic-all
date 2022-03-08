@@ -1,9 +1,9 @@
 ## view name: vw_programmatic_all_kargo
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on:
-## Last modified by:
-## Change log:
+## Last modified on: 3/1/2022
+## Last modified by: bj.hollowell@meredith.com
+## Change log: limiting fields pulled in from raw data source
 ##
 ##
 ## notes:
@@ -12,7 +12,16 @@
 WITH
 
 kargo_base AS (
-    SELECT *
+    SELECT
+        date,
+        property,
+        ad_slot_name,
+        country,
+        dsp,
+        landing_page_domain,
+        deal_name,
+        revenue,
+        impressions
     FROM `meredith-switchboard.kargo.kargo_*`
     WHERE date >= '2020-01-01'
 ),

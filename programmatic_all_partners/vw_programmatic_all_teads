@@ -1,18 +1,31 @@
 ## view name: vw_programmatic_all_teads
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on:
-## Last modified by:
-## Change log:
+## Last modified on: 3/2/2022
+## Last modified by: bj.hollowell@meredith.com
+## Change log: limiting fields pulled in from raw data source
 ##
 ##
 ## notes:
 ##
 
+
 WITH
 
 teads_base AS (
-    SELECT *
+    SELECT
+        day,
+        website_domain,
+        buyer_type,
+        device,
+        country,
+        adsource,
+        advertiser_domain,
+        deal_id_keycode,
+        transaction_type,
+        connection,
+        income_converted_usd,
+        publisher_billable_volume
     FROM `meredith-switchboard.teads.teads_api_*`
     WHERE day >= '2020-01-01'
 ),

@@ -1,9 +1,9 @@
 ## view name: vw_programmatic_all_videointelligence
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on:
-## Last modified by:
-## Change log:
+## Last modified on: 3/2/2022
+## Last modified by: bj.hollowell@meredith.com
+## Change log: limiting fields pulled in from raw data source
 ##
 ##
 ## notes:
@@ -12,7 +12,14 @@
 WITH
 
 vi_base AS (
-    SELECT * FROM `meredith-switchboard.video_intelligence.video_intelligence_*`
+    SELECT
+        Date,
+        domain,
+        deviceType,
+        country,
+        netRevenue,
+        inventoryImpressions
+    FROM `meredith-switchboard.video_intelligence.video_intelligence_*`
 ),
 
 vi_cleaned AS (

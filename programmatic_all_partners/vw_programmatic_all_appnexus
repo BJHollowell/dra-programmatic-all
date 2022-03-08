@@ -1,9 +1,9 @@
 ## view name: vw_programmatic_all_appnexus
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on:
-## Last modified by:
-## Change log:
+## Last modified on: 3/1/2022
+## Last modified by: bj.hollowell@meredith.com
+## Change log: limiting fields pulled in from raw data source
 ##
 ##
 ## notes:
@@ -19,7 +19,22 @@ prog_tag_map AS (
 ),
 
 appnexus_base AS (
-    SELECT *
+    SELECT
+        day,
+        publisher_name,
+        placement_name,
+        deal_name,
+        size,
+        media_type,
+        geo_country_name,
+        bidder_name,
+        buyer_member_name,
+        brand_name,
+        deal_id,
+        revenue,
+        imps,
+        view_measured_imps,
+        imps_viewed
     FROM `meredith-switchboard.appnexus.seller_brand_review_*`
     WHERE day >= '2020-01-01'
 ),

@@ -1,9 +1,9 @@
 ## view name: vw_programmatic_all_yahoo
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on: 2/14/22
+## Last modified on: 3/2/2022
 ## Last modified by: bj.hollowell@meredith.com
-## Change log: switched 'Verizon' to 'Yahoo'
+## Change log: limiting fields pulled in from raw data source
 ##
 ##
 ## notes:
@@ -17,18 +17,13 @@ yahoo_base AS (
         advertiser,
         placement_type_name,
         position,
-        country_id,
         country_name,
-        country_name_type,
         device_type_name,
         seat_name,
-        site,
+        --site,
         buyer,
-        bidder,
         publisher_revenue,
-        ads_delivered,
-        ads_clicked,
-        switchboard_processing_time
+        ads_delivered
     FROM `meredith-switchboard.verizon.verizon_analytics_*`
 ),
 
@@ -36,8 +31,8 @@ yahoo_cleaned AS (
     SELECT
        'Yahoo API' AS source,                               ## formerly 'Verizon API'
         CAST(Date AS TIMESTAMP) AS date,
-        'Yahoo' AS partner,                               ## keeping as is for now and then can be updated at later date with overhaul of prog_tag_map
-        CONCAT('Verizon', ';', position) AS tag_site,
+        'Yahoo' AS partner,
+        CONCAT('Verizon', ';', position) AS tag_site,       ## keeping as is for now and then can be updated at later date with overhaul of prog_tag_map
         'Open' AS transaction_type,
         --'' AS site,
         --'' AS tier,

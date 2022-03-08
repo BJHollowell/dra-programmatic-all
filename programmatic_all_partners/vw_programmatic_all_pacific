@@ -1,9 +1,9 @@
 ## view name: vw_programmatic_all_pacific
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on:
-## Last modified by:
-## Change log:
+## Last modified on: 3/1/2022
+## Last modified by: bj.hollowell@meredith.com
+## Change log: limiting fields pulled in from raw data source
 ##
 ##
 ## notes:
@@ -12,7 +12,15 @@
 WITH
 
 pacific_base AS (
-    SELECT * FROM `meredith-switchboard.pacific.pacific_flat_file_20211113`
+    SELECT
+        date,
+        tier,
+        ad_size,
+        final_device,
+        net_revenue,
+        gross_revenue,
+        total_impressions
+    FROM `meredith-switchboard.pacific.pacific_flat_file_20211113`
 ),
 
 pacific_cleaned AS (
