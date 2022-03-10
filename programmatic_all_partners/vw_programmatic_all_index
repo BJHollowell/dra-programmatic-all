@@ -1,12 +1,12 @@
 ## view name: vw_programmatic_all_index
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on:
+## Last modified on: 3/9/2022
 ## Last modified by:
 ## Change log:
 ##
 ##
-## notes:
+## notes: OB files are pre-July 2020 and static tables saved in BQ. the rest of the data is pulled from GCS data (moved from S3)
 ##
 
 WITH
@@ -20,7 +20,17 @@ prog_tag_map AS (
 
 index_base AS (
     SELECT
-        A.*,
+        A.mdpfiledate,
+        A.timestamp,
+        A.size,
+        A.inventory_channel,
+        A.supply_source,
+        A.device_type,
+        A.country,
+        A.brand_name,
+        A.deal_id,
+        A.net_revenue,
+        A.gross_revenue,
         B.buyer_name AS buyer_name,
         C.deal_type AS deal_type,
         C.deal_name AS deal_name,
@@ -43,6 +53,7 @@ index_base AS (
     WHERE TIMESTAMP_MILLIS(timestamp) >= '2020-01-01'
 ),
 
+## only runs from 1/1/2020 - 7/1/2020
 index_OB_base AS (
     SELECT
         *,
@@ -52,7 +63,7 @@ index_OB_base AS (
 
 index_cleaned AS (
     SELECT
-        mdpfiledate,
+        --mdpfiledate,
         'Index CAL' AS source,
         TIMESTAMP_MILLIS(timestamp) AS date,
         'Index' AS partner,
@@ -143,9 +154,9 @@ index_unioned AS (
     UNION ALL
 
     SELECT
-        CAST(table_num AS DATE) AS mdpfiledate,
+        --PARSE_DATE('%Y%m%d', table_id) AS mdpfiledate,
         source,
-        date,
+        CAST(date AS TIMESTAMP) AS date,
         partner,
         tag_site,
         transaction_type,
@@ -182,91 +193,6 @@ index_unioned AS (
     FROM index_OB_base
 ),
 
-index_deduped AS (
-    SELECT
-        * EXCEPT(mdpfiledate, file_count, file_max)
-    FROM (
-        SELECT
-            *,
-            COUNT(DISTINCT(mdpfiledate)) OVER (PARTITION BY Date) AS file_count,
-            MAX(mdpfiledate) OVER (PARTITION BY Date) AS file_max
-        FROM index_unioned
-    )
-    WHERE (file_count = 1) OR (file_count > 1 AND mdpfiledate = file_max)
-),
-
-/*
-index_cal_agg AS(
-    SELECT
-        filename as filename_dupe,
-        max_time
-    FROM (
-        SELECT
-            filename,
-            MAX(switchboard_processing_time) OVER (PARTITION BY filename) as max_time
-        FROM index_cleaned
-        GROUP BY
-            filename,
-            switchboard_processing_time
-    )
-    GROUP BY
-        filename,
-        max_time
-),
-
-index_cal_dedupe AS (
-    SELECT *
-    FROM index_cleaned A
-    LEFT JOIN index_cal_agg B
-    ON A.filename = B.filename_dupe AND A.switchboard_processing_time = B.max_time
-),
-*/
-
-/*
-index_mapped AS(
-    SELECT
-        A.source,
-        A.date,
-        A.partner,
-        A.tag_site,
-        A.transaction_type,
-        --B.Site,
-        --B.Tier,
-        A.ad_size_initial,
-        CASE
-            WHEN A.source = 'Index CAL_OB' AND A.ad_size = '300x250'  THEN '300x250'
-            WHEN A.source = 'Index CAL_OB' AND A.ad_size = '320x50'   THEN '320x50'
-            WHEN A.source = 'Index CAL_OB' AND A.ad_size = '728x90'   THEN '728x90'
-            WHEN A.source = 'Index CAL_OB' AND A.ad_size = '300x600'  THEN '300x600'
-            WHEN A.source = 'Index CAL_OB' AND A.ad_size = '300x1050' THEN '300x1050'
-            WHEN A.source = 'Index CAL'    THEN A.ad_size
-            ELSE 'Video/Overlay'
-            END AS ad_size,
-        A.ad_type,
-        A.path_type,
-        A.device_type_initial,
-        A.device_type,
-        A.country_initial,
-        A.country,
-        A.dsp_initial,
-        A.buyer_initial,
-        A.advertiser_initial,
-        A.deal_id,
-        A.deal_name,
-        A.net_revenue,
-        A.gross_revenue,
-        A.imps,
-        NULL AS active_view_measured_impressions,
-        NULL AS active_view_viewed_impressions,
-        NULL AS bid_requests,
-        NULL AS bid_responses
-    FROM index_cal_dedupe A
-    LEFT JOIN prog_tag_map B
-    ON A.tag_site = B.tag_site_map
-    WHERE max_time IS NOT NULL
-),
-*/
-
 index_bid_prog_all_proxy AS (
     SELECT
         'Index CAL' AS source,
@@ -299,9 +225,13 @@ index_bid_prog_all_proxy AS (
 ),
 
 index_final_unioned AS (
-    SELECT * FROM index_deduped
+    SELECT * FROM index_unioned
     UNION ALL
     SELECT * FROM index_bid_prog_all_proxy
 )
 
-SELECT * FROM index_final_unioned
+SELECT
+    count(*) as row_count,
+    sum(imps) as imps,
+    sum(net_revenue) as net_rev
+FROM index_final_unioned

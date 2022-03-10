@@ -1,9 +1,9 @@
 ## view name: vw_programmatic_all
 ## description: aggregated SSP data, showing programmatic delivery and impressions
 ## created by: BJ Hollowell bj.hollowell@meredith.com
-## Last modified on: 2/14/22
+## Last modified on: 3/9/22
 ## Last modified by: bj.hollowell@meredith.com
-## Change log: 2/14/22 BJ implemented new partner views and name changes for Verizon --> Yahoo and PowerInbox --> Jeeng
+## Change log: 3/9/22 update Index view to use external dataset with GCS files
 ##
 ## notes:
 ##
@@ -178,7 +178,7 @@ WITH
     ON UPPER(A.Advertiser_initial) = E.advertiser_from_source
     ),
   programmatic_all_untagged AS(
-  SELECT * FROM `meredith-switchboard.programmatic_all.vw_Index_programmatic_all`
+  SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_index`
 
   UNION ALL
 
