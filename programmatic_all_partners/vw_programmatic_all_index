@@ -1,10 +1,9 @@
 ## view name: vw_programmatic_all_index
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on: 3/10/2022
+## Last modified on: 3/11/2022
 ## Last modified by:
-## Change log:  separated base and mapped steps of raw data.  Also added device_type mapping to pick up new values
-##              introduced as of March 2022
+## Change log:  aggregated data at mapping step for better processing.
 ##
 ## notes: OB files are pre-July 2020 and static tables saved in BQ. the rest of the data is pulled from GCS data (moved from S3)
 ##
@@ -34,12 +33,23 @@ index_base AS (
 
 index_mapped AS (
     SELECT
-        A.*,
+        A.mdpfiledate,
+        A.timestamp,
+        A.size,
+        A.inventory_channel,
+        A.supply_source,
+        A.device_type,
+        A.country,
+        A.brand_name,
+        A.deal_id,
         B.buyer_name AS buyer_name,
         C.deal_type AS deal_type,
         C.deal_name AS deal_name,
         D.dsp_name AS dsp_name,
-        E.site_name AS site_name
+        E.site_name AS site_name,
+        SUM(A.net_revenue) AS net_revenue,
+        SUM(A.gross_revenue) AS gross_revenue,
+        SUM(A.impressions) AS impressions
     FROM index_base A
 
     LEFT JOIN `meredith-switchboard.indexexchange_audit_logs.mapping_buyers` B
@@ -53,6 +63,8 @@ index_mapped AS (
 
     LEFT JOIN `meredith-switchboard.indexexchange_audit_logs.mapping_sites` E
     ON A.site_id = E.site_id
+
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14
 ),
 
 ## only runs from 1/1/2020 - 7/1/2020
