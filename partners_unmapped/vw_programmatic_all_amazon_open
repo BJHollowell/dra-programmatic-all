@@ -1,0 +1,232 @@
+## view name: vw_programmatic_all_amazon_open
+## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
+## created by: bj.hollowell@meredith.com
+## Last modified on: 2/18/2022
+## Last modified by: andy.bieber@meredith.com
+## Change log: 2/18/2022 updated Verizon TAM partner to surface as "Yahoo"
+##
+##
+## notes:
+##
+
+WITH
+
+amazon_open_bids AS (
+    SELECT
+        date,
+        hour,
+        sitename,
+        size,
+        slotname,
+        ipgeo,
+        devicespec,
+        bidder_name,
+        inventorytype,
+        auctiontype,
+        SUM(outgoing_bid_requests) AS outgoing_bid_requests,
+        SUM(valid_bids) AS valid_bids,
+        SUM(bids_won) AS bids_won,
+        SUM(no_bids) AS no_bids,
+        SUM(bids_error) AS bids_error,
+        SUM(bids_timeout) AS bids_timeout,
+        SUM(impressions) AS impressions,
+        SUM(earnings) AS earnings
+    FROM `meredith-switchboard.amazon.bid_metrics_v2_*`
+    WHERE date >= '2020-01-01'
+    GROUP BY 1,2,3,4,5,6,7,8,9,10
+),
+
+amazon_open_md AS (
+    SELECT
+        date,
+        hour,
+        site_name AS sitename,
+        size,
+        slot_name AS slotname,
+        ip_geo AS ipgeo,
+        device_spec AS devicespec,
+        bidder_name,
+        inventorytype,
+        auctiontype,
+        SUM(outgoing_bid_requests) AS outgoing_bid_requests,
+        SUM(valid_bids) AS valid_bids,
+        SUM(bids_won) AS bids_won,
+        SUM(no_bids) AS no_bids,
+        SUM(bids_error) AS bids_error,
+        SUM(bids_timeout) AS bids_timeout,
+        SUM(impressions) AS impressions,
+        SUM(earnings) AS earnings
+    FROM `meredith-switchboard.amazon.bid_metrics_meredith_digital_*`
+    WHERE date >= '2020-01-01'
+    GROUP BY 1,2,3,4,5,6,7,8,9,10
+),
+
+amazon_open_base AS (
+    SELECT * FROM amazon_open_bids
+    UNION ALL
+    SELECT * FROM amazon_open_md
+),
+
+amazon_open_cleaned AS (
+    SELECT
+        'Amazon Bids Email' AS source,
+        CAST(date AS TIMESTAMP) AS date,
+        CASE
+            WHEN bidder_name = 'Amazon'                    THEN 'A9'
+            WHEN bidder_name = 'PubMatic'                  THEN 'Pubmatic'
+            WHEN bidder_name = 'test-911'                  THEN 'Pubmatic'
+            WHEN bidder_name = 'Verizon_Media_Marketplace' THEN 'Yahoo'
+            WHEN bidder_name = 'Oath'                      THEN 'Yahoo'
+            WHEN bidder_name = 'Verizon'                   THEN 'Yahoo'
+            ELSE bidder_name
+            END AS partner,
+        CONCAT('Amazon', ';', sitename, ';', slotname) AS tag_site,
+        'Open' AS transaction_type,
+        '' AS site,
+        '' AS tier,
+        size AS ad_size_initial,
+        CASE
+            WHEN size = '300x250'          THEN '300x250'
+            WHEN size = '320x50'           THEN '320x50'
+            WHEN size = '728x90'           THEN '728x90'
+            WHEN size = '300x600'          THEN '300x600'
+            WHEN size = '970x250'          THEN '970x250'
+            WHEN size = '300x1050'         THEN '300x1050'
+            WHEN size = '970x90'           THEN '970x90'
+            WHEN sitename LIKE '%preroll%' THEN 'Video/Overlay'
+            WHEN slotname LIKE '%preroll%' THEN 'Video/Overlay'
+            ELSE 'Other'
+            END AS ad_size,
+        CASE
+            WHEN slotname LIKE '%preroll%' THEN 'Video'
+            WHEN slotname LIKE '%Preroll%' THEN 'Video'
+            WHEN sitename LIKE '%spinner%' THEN 'App'
+            WHEN sitename LIKE '%Spinner%' THEN 'App'
+            ELSE 'Display'
+            END AS ad_type,
+        CASE
+            WHEN bidder_name = 'Amazon' THEN 'HB'
+            ELSE 'TAM'
+            END AS path_type,
+        devicespec AS device_type_initial,
+        CASE
+            WHEN slotname LIKE '%.amp%'     THEN 'AMP'
+            WHEN slotname LIKE '%.AMP%'     THEN 'AMP'
+            WHEN devicespec LIKE '%Phone%'  THEN 'MobileWeb'
+            WHEN devicespec LIKE '%iPod%'   THEN 'MobileWeb'
+            WHEN devicespec LIKE '%PC%'     THEN 'Desktop'
+            WHEN devicespec LIKE '%Tablet%' THEN 'Desktop'
+            WHEN devicespec LIKE '%iPad%'   THEN 'Desktop'
+            WHEN devicespec LIKE '%Kindle%' THEN 'Desktop'
+            WHEN devicespec LIKE '%TV%'     THEN 'Connected TV'
+            ELSE 'Unknown'
+            END AS device_type,
+        ipgeo AS country_initial,
+        CASE
+            WHEN ipgeo = 'US' THEN 'USA'
+            ELSE 'XUS'
+            END AS country,
+        'Unknown' AS dsp_initial,
+        'Unknown' AS buyer_initial,
+        'Unknown' AS advertiser_initial,
+        'Unknown' AS deal_id,
+        'Open' AS deal_name,
+        SUM(earnings) AS net_revenue,
+        SUM(earnings) AS gross_revenue,
+        SUM(impressions) AS imps,
+        NULL AS active_view_measured_impressions,
+        NULL AS active_view_viewed_impressions,
+        NULL AS bid_requests,
+        NULL AS bid_responses
+    FROM amazon_open_base
+    WHERE
+        bidder_name NOT LIKE '%ADA EU%'
+        AND bidder_name NOT LIKE '%AVM Computersysteme Vertriebs GmbH - DE%'
+        AND bidder_name NOT LIKE '%Cadreon IT%'
+        AND bidder_name NOT LIKE '%GroupM CA%'
+        AND bidder_name NOT LIKE '%GroupM The&Partners FR%'
+        AND bidder_name NOT LIKE '%GroupM Unilever ES%'
+        AND bidder_name NOT LIKE '%Hearts & Science AU%'
+        AND bidder_name NOT LIKE '%MightyHive AU%'
+        AND bidder_name NOT LIKE '%OMD: AU%'
+        AND bidder_name NOT LIKE '%PHD AU%'
+        AND bidder_name NOT LIKE '%PHD_SEAT ES%'
+        AND bidder_name NOT LIKE '%Sony Electronics DE%'
+        AND bidder_name NOT LIKE '%Suncorp Group: AU%'
+        AND bidder_name NOT LIKE '%Turbo IT%'
+        AND bidder_name NOT LIKE '%Viewspotter AU%'
+        AND bidder_name NOT LIKE '%Vivaki Zenith JP%'
+        AND bidder_name NOT LIKE '%OpenX%'
+        AND bidder_name NOT LIKE '%AppNexus%'
+        AND bidder_name NOT LIKE '%Rubicon%'
+        AND bidder_name NOT LIKE '%Magnite%'
+        AND bidder_name NOT LIKE '%Index%'
+        AND bidder_name NOT LIKE '%SpotX%'
+        AND bidder_name NOT LIKE '%Kargo%'
+        AND bidder_name NOT LIKE '%Triplelift%'
+        AND bidder_name NOT LIKE '%Moloco%'
+        AND bidder_name NOT LIKE '%Liftoff%'
+        AND bidder_name NOT LIKE '%RhythmOne%'
+        AND bidder_name NOT LIKE '%AdColony_UAM%'
+        AND bidder_name NOT LIKE '%Smaato%'
+        AND bidder_name NOT LIKE '%Conversant_UAM%'
+        AND bidder_name NOT LIKE '%PubMatic UAM EU%'
+        AND bidder_name NOT LIKE '%Aarki%'
+        AND bidder_name NOT LIKE '%Beachfront%'
+        AND bidder_name NOT LIKE '%Undertone%'
+        AND bidder_name NOT LIKE '%Sovrn%'
+        AND bidder_name NOT LIKE '%MobileFuse%'
+        AND bidder_name NOT LIKE '%The Media Grid%'
+        AND bidder_name NOT LIKE '%Amobee DSP%'
+        AND bidder_name NOT LIKE '%SmartAd%'
+        AND bidder_name NOT LIKE '%Simplifi%'
+        AND bidder_name NOT LIKE '%InMobi%'
+        AND bidder_name NOT LIKE '%MobFox%'
+        AND bidder_name NOT LIKE '%The Media Grid UAM%'
+        AND bidder_name NOT LIKE '%PubMatic UAM APAC%'
+        AND bidder_name NOT LIKE '%AdColony%'
+        AND bidder_name NOT LIKE '%Nativo%'
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
+)
+
+SELECT
+    source,
+    date,
+    partner,
+    tag_site,
+    transaction_type,
+    --site,
+    --tier,
+    ad_size_initial,
+    ad_size,
+    ad_type,
+    path_type,
+    device_type_initial,
+    device_type,
+    country_initial,
+    country,
+    dsp_initial,
+    buyer_initial,
+    advertiser_initial,
+    deal_id,
+    deal_name,
+    net_revenue,
+    CASE
+        WHEN partner = 'DistrictM' THEN (gross_revenue / 0.90)
+        WHEN partner = 'DMX' THEN (gross_revenue / 0.90)
+        WHEN partner = 'EMX' THEN (gross_revenue / 0.90)
+        WHEN partner = 'GumGum' THEN (gross_revenue / 0.90)
+        WHEN partner = 'Pubmatic' THEN (gross_revenue / 0.82)
+        WHEN partner = 'Pulsepoint' THEN (gross_revenue / 0.80)
+        WHEN partner = 'Sharethrough' THEN (gross_revenue / 0.90)
+        WHEN partner = 'Sonobi' THEN (gross_revenue / 0.85)
+        WHEN partner = 'Verizon' THEN (gross_revenue / 0.85)
+        WHEN partner = 'YieldMo' THEN (gross_revenue / 0.70)
+        ELSE gross_revenue
+        END AS gross_revenue,
+    imps,
+    active_view_measured_impressions,
+    active_view_viewed_impressions,
+    bid_requests,
+    bid_responses
+FROM amazon_open_cleaned

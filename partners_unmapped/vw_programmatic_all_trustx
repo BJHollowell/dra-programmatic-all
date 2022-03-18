@@ -1,0 +1,205 @@
+## view name: vw_programmatic_all_trustx
+## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
+## created by: bj.hollowell@meredith.com
+## Last modified on: 2/28/2022
+## Last modified by: bj.hollowell@meredith.com
+## Change log:  2/28/2022 BJ amended the base steps to limit fields brought in, dedupe within that step and aggregate
+##              progall was taking too long to process and it was due to steps like those. this will cut down processing
+##
+## notes:
+##
+
+WITH
+
+trustx_base_old AS (
+    SELECT
+        table_num,
+        day,
+        ad_unit_name,
+        creative_size,
+        country,
+        dsp_name,
+        buyer_id_name,
+        landing_page_domain,
+        SUM(pub_payout) AS pub_payout,
+        SUM(imps) AS imps
+    FROM (
+        SELECT
+            _table_suffix AS table_num,
+            A.day,
+            ad_unit_name,
+            creative_size,
+            country,
+            dsp_name,
+            buyer_id_name,
+            landing_page_domain,
+            pub_payout,
+            imps
+        FROM `meredith-switchboard.trustx.trustx_2*` A
+
+        INNER JOIN (
+            SELECT
+                day,
+                MAX(_table_suffix) AS max_table_num
+            FROM `meredith-switchboard.trustx.trustx_2*`
+            GROUP BY 1 ) B
+        ON A.day = B.day AND A._table_suffix = B.max_table_num
+    )
+    WHERE day BETWEEN '2020-01-01' AND '2021-11-15'
+    GROUP BY 1,2,3,4,5,6,7,8
+),
+
+trustx_base_new AS (
+    SELECT
+        table_num,
+        date,
+        AD_UNIT_NAME,
+        CREATIVE_SIZE,
+        DSP_NAME,
+        BUYER_NAME,
+        LANDING_PAGE,
+        DEAL_ID,
+        DEAL_NAME,
+        SUM(adv_payout_billable) AS adv_payout_billable,
+        SUM(billable_events) AS billable_events,
+        SUM(yes_bids) AS yes_bids,
+        SUM(no_bids) AS no_bids
+    FROM (
+        SELECT
+            _table_suffix AS table_num,
+            A.date,
+            AD_UNIT_NAME,
+            CREATIVE_SIZE,
+            DSP_NAME,
+            BUYER_NAME,
+            LANDING_PAGE,
+            DEAL_ID,
+            DEAL_NAME,
+            adv_payout_billable,
+            billable_events,
+            yes_bids,
+            no_bids
+        FROM `meredith-switchboard.trustx.trustx_v2_*` A
+
+        INNER JOIN (
+            SELECT
+                date,
+                MAX(_table_suffix) AS max_table_num
+            FROM `meredith-switchboard.trustx.trustx_v2_*`
+            GROUP BY 1 ) B
+        ON A.date = B.date AND A._table_suffix = B.max_table_num
+    )
+    GROUP BY 1,2,3,4,5,6,7,8,9
+),
+
+trustx_cleaned_old AS (
+    SELECT
+        'TrustX Email' AS source,
+        CAST(day AS TIMESTAMP) AS date,
+        'TrustX' AS partner,
+        CONCAT('TrustX', ';', ad_unit_name) AS tag_site,
+        'Open' AS transaction_type,
+        '' AS site,
+        '' AS tier,
+        creative_size AS ad_size_initial,
+        CASE
+            WHEN CREATIVE_SIZE = '300x250'  THEN CREATIVE_SIZE
+            WHEN CREATIVE_SIZE = '320x50'   THEN CREATIVE_SIZE
+            WHEN CREATIVE_SIZE = '728x90'   THEN CREATIVE_SIZE
+            WHEN CREATIVE_SIZE = '300x600'  THEN CREATIVE_SIZE
+            WHEN CREATIVE_SIZE = '300x1050' THEN CREATIVE_SIZE
+            WHEN CREATIVE_SIZE = '970x250'  THEN CREATIVE_SIZE
+            WHEN CREATIVE_SIZE = '640x360'  THEN 'Video/Overlay'
+            ELSE 'Other'
+         END AS ad_size,
+        'Display' AS ad_type,
+        'HB' AS path_type,
+        '' AS device_type_initial,
+        '' AS device_type,
+        country AS country_initial,
+        CASE
+            WHEN country = 'US' THEN 'USA'
+            WHEN country = 'unknown' THEN 'Unknown'
+            WHEN country = 'Unknown' THEN 'Unknown'
+            ELSE 'XUS'
+            END AS country,
+        dsp_name AS dsp_initial,
+        buyer_id_name AS buyer_initial,
+        landing_page_domain AS advertiser_initial,
+        'Open' AS deal_id,
+        'Open' AS deal_name,
+        SUM(pub_payout) AS net_revenue,
+        SUM((pub_payout / 0.875)) AS gross_revenue,
+        SUM(imps) AS imps,
+        NULL AS active_view_measured_impressions,
+        NULL AS active_view_viewed_impressions,
+        NULL AS bid_requests,
+        NULL AS bid_responses
+    FROM trustx_base_old
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
+),
+
+trustx_cleaned_new AS (
+    SELECT
+        'TrustX Email' AS source,
+        CAST(date AS TIMESTAMP) AS date,
+        'TrustX' AS partner,
+        CONCAT('TrustX', ';', AD_UNIT_NAME) AS tag_site,
+        CASE
+            WHEN DEAL_ID = '0' THEN 'Open'
+            ELSE 'PMP'
+            END AS transaction_type,
+        '' AS site,
+        '' AS tier,
+        CREATIVE_SIZE AS ad_size_initial,
+        CASE
+            WHEN CREATIVE_SIZE = '300x250'  THEN CREATIVE_SIZE
+            WHEN CREATIVE_SIZE = '320x50'   THEN CREATIVE_SIZE
+            WHEN CREATIVE_SIZE = '728x90'   THEN CREATIVE_SIZE
+            WHEN CREATIVE_SIZE = '300x600'  THEN CREATIVE_SIZE
+            WHEN CREATIVE_SIZE = '300x1050' THEN CREATIVE_SIZE
+            WHEN CREATIVE_SIZE = '970x250'  THEN CREATIVE_SIZE
+            WHEN CREATIVE_SIZE = '640x360'  THEN 'Video/Overlay'
+            ELSE 'Other'
+            END AS ad_size,
+        CASE
+            WHEN CREATIVE_SIZE = '640x360' THEN 'Video'
+            ELSE 'Display'
+            END AS ad_type,
+        'HB' AS path_type,
+        '' AS device_type_initial,
+        'to_be_mapped' AS device_type,
+        '' AS country_initial,
+        'Unknown' AS country,
+        DSP_NAME AS dsp_initial,
+        BUYER_NAME AS buyer_initial,
+        LANDING_PAGE AS advertiser_initial,
+        CASE
+            WHEN DEAL_ID = '0' THEN 'Open'
+            ELSE DEAL_ID
+            END AS deal_id,
+        CASE
+            WHEN DEAL_NAME = '0' THEN 'Open'
+            ELSE DEAL_NAME
+            END AS deal_name,
+        SUM(CASE
+            WHEN DSP_NAME = 'GRID' THEN (adv_payout_billable * 0.92)
+            ELSE (adv_payout_billable * 0.875)
+            END ) AS net_revenue,
+        SUM(adv_payout_billable) AS gross_revenue,
+        SUM(billable_events) AS imps,
+        NULL AS active_view_measured_impressions,
+        NULL AS active_view_viewed_impressions,
+        SUM((yes_bids + no_bids)) AS bid_requests,
+        SUM(yes_bids) AS bid_responses
+    FROM trustx_base_new
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
+),
+
+trustx_unioned AS (
+    SELECT * FROM trustx_cleaned_new
+    UNION ALL
+    SELECT * FROM trustx_cleaned_old
+)
+
+SELECT * FROM trustx_unioned

@@ -1,0 +1,103 @@
+## view name: vw_programmatic_all_spotx
+## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
+## created by: bj.hollowell@meredith.com
+## Last modified on: 3/1/2022
+## Last modified by: bj.hollowell@meredith.com
+## Change log:  3/1/2022 BJ amended the base steps to limit fields brought in, dedupe within that step and aggregate
+##              progall was taking too long to process and it was due to steps like those. this will cut down processing
+##
+## notes:
+##
+
+WITH
+
+spotx_base AS (
+    SELECT
+        table_num,
+        date,
+        app_name,
+        deal_id,
+        channel_name,
+        country,
+        ad_partner,
+        advertiser_domain,
+        deal_name,
+        SUM(net_revenue_usd) AS net_revenue_usd,
+        SUM(gross_revenue_usd) AS gross_revenue_usd,
+        SUM(impressions) AS impressions
+    FROM (
+        SELECT
+            _table_suffix AS table_num,
+            A.date,
+            app_name,
+            deal_id,
+            channel_name,
+            country,
+            ad_partner,
+            advertiser_domain,
+            deal_name,
+            net_revenue_usd,
+            gross_revenue_usd,
+            impressions
+        FROM `meredith-switchboard.spotx.spotx_custom_report_*` A
+
+        INNER JOIN (
+            SELECT
+                date,
+                MAX(_table_suffix) AS max_table_num
+            FROM `meredith-switchboard.spotx.spotx_custom_report_*`
+            GROUP BY 1 ) B
+        ON A.date = B.date AND A._table_suffix = B.max_table_num
+    )
+    WHERE date >= '2020-01-01'
+    GROUP BY 1,2,3,4,5,6,7,8,9
+),
+
+spotx_cleaned AS (
+    SELECT
+        'SpotX custom API' AS source,
+        CAST(date AS TIMESTAMP) AS date,
+        'SpotX' AS partner,
+        CONCAT('SpotX', ';', app_name) AS tag_site,
+        CASE
+            WHEN deal_id = 'spotx' THEN 'Open'
+            ELSE 'PMP'
+            END AS transaction_type,
+        '' AS site,
+        'No Tier' AS tier,
+        '' AS ad_size_initial,
+        'Video/Overlay' AS ad_size,
+        'Video' AS ad_type,
+        CASE
+            WHEN channel_name = 'TAM' THEN 'TAM'
+            ELSE 'Tag in adserver'
+            END AS path_type,
+            '' AS device_type_initial,
+        'Connected TV' AS device_type,
+        country AS country_initial,
+        CASE
+            WHEN country = 'United States' THEN 'USA'
+            WHEN country = 'N/A'           THEN 'Unknown'
+            ELSE 'XUS'
+            END AS country,
+        ad_partner AS dsp_initial,
+        'Unknown' AS buyer_initial,
+        advertiser_domain AS advertiser_initial,
+        deal_id AS deal_id,
+        deal_name AS deal_name,
+        SUM(CASE
+            WHEN channel_name LIKE '%Gloss%' THEN (net_revenue_usd * 0.65)
+            WHEN channel_name LIKE 'Gloss%'  THEN (net_revenue_usd * 0.65)
+            ELSE net_revenue_usd
+            END ) AS net_revenue,
+        SUM(gross_revenue_usd) AS gross_revenue,
+        SUM(impressions) AS imps,
+        NULL AS active_view_measured_impressions,
+        NULL AS active_view_viewed_impressions,
+        NULL AS bid_requests,
+        NULL AS bid_responses
+    FROM spotx_base
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
+)
+
+SELECT * FROM spotx_cleaned

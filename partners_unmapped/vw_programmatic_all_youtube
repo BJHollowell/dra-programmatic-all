@@ -1,0 +1,159 @@
+## view name: vw_programmatic_all_youtube
+## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
+## created by: bj.hollowell@meredith.com
+## Last modified on: 3/2/2022
+## Last modified by: bj.hollowell@meredith.com
+## Change log: limiting fields pulled in from raw data source
+##
+##
+## notes:
+##
+
+WITH
+
+youtube_base AS (
+    SELECT
+        A.date,
+        A.country_code,
+        CASE
+            WHEN date BETWEEN '2020-01-01' AND '2020-10-08' AND A.channel_id = 'UC5SJjoYO0cKJmx37WGT8amg' THEN 'Emeril Lagasse'
+            WHEN date BETWEEN '2020-01-01' AND '2020-10-08' AND A.channel_id = 'UCSU_obGvO2IOIh_DedvI2nA' THEN 'FanSided'
+            WHEN date BETWEEN '2020-01-01' AND '2020-10-08' AND A.channel_id = 'UCGFBKGwap9wa9npMd1n-1Vw' THEN 'MONEY'
+            WHEN date BETWEEN '2020-01-01' AND '2020-10-08' AND A.channel_id = 'UCPAt6z5uX_c5Eo_cSNROzYw' THEN 'Sports Illustrated'
+            WHEN date BETWEEN '2020-01-01' AND '2020-10-08' AND A.channel_id = 'UCW7ck0jRwnXqmShjGdsaoPA' THEN 'Sports Illustrated Swimsuit'
+            ELSE B.title
+            END AS channel_title,
+        SUM(A.estimated_partner_revenue) AS estimated_partner_revenue,
+        SUM(A.ad_impressions) AS ad_impressions
+    FROM `meredith-switchboard.youtube.raw_estimated_revenue_o_and_o_*` A
+    LEFT JOIN `meredith-switchboard.youtube.channels_o_and_o` B
+    ON A.channel_id = B.channel_id
+    WHERE date >= '2020-01-01'
+    GROUP BY 1,2,3
+
+    UNION ALL
+
+    SELECT
+        A.date,
+        A.country_code,
+        B.title AS channel_title,
+        SUM(A.estimated_partner_revenue) AS estimated_partner_revenue,
+        SUM(A.ad_impressions) AS ad_impressions
+    FROM `meredith-switchboard.youtube.raw_estimated_revenue_partners_*` A
+    LEFT JOIN `meredith-switchboard.youtube.channels_partners` B
+    ON A.channel_id = B.channel_id
+    WHERE date >= '2020-01-01'
+    GROUP BY 1,2,3
+),
+
+youtube_cleaned AS (
+    SELECT
+        'YouTube API' AS source,
+        CAST(date AS TIMESTAMP) AS date,
+        'YouTube' AS partner,
+        CONCAT('YouTube', ';', channel_title) AS tag_site,
+        'Open' AS transaction_type,
+        '' AS site,
+        'No Tier' AS tier,
+        '' AS ad_size_initial,
+        'Video/Overlay' AS ad_size,
+        'Video' AS ad_type,
+        'Indirect' AS path_type,
+        '' AS device_type_initial,
+        'Unknown' AS device_type,
+        country_code AS country_initial,
+        CASE
+            WHEN country_code = 'US' THEN 'USA'
+            ELSE 'XUS'
+            END AS country,
+        '' dsp_initial,
+        '' buyer_initial,
+        '' advertiser_initial,
+        '' deal_id,
+        '' deal_name,
+        SUM(estimated_partner_revenue) AS net_revenue,
+        SUM((estimated_partner_revenue / 0.55)) AS gross_revenue,
+        SUM(ad_impressions) AS imps,
+        NULL AS active_view_measured_impressions,
+        NULL AS active_view_viewed_impressions,
+        NULL AS bid_requests,
+        NULL AS bid_responses
+    FROM youtube_base
+    WHERE tag_site IS NOT NULL
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
+)
+
+SELECT *
+FROM youtube_cleaned
+
+/*
+## channels_o_and_o map values as of 2/9/2022
+
+Row	Title - Channel_id
+01 Allrecipes - UC4tAgeVdaNB5vD_mBoxg50w
+02 Allrecipes AU | NZ - UCLj8f_mZrTVp7lv7HDQbNcA
+03 Allrecipes Argentina - UCtZsvfX8CGZKC1_1cBoyr4w
+04 Allrecipes Brasil - UCXTjdBuMuZowQyhvMt6j_og
+05 Allrecipes Deutschland - UC34GVn23XuJ5fZ0RMjR6NcA
+06 Allrecipes France - UCzJ-fVHFXzxUdI5qPEA_Jow
+07 Allrecipes HomeHappyHour - UCzVdxf0dAZr22QN62wtGfxA
+08 Allrecipes Italia - UC6bDODYMQ3XttnYm0xIAgJw
+09 Allrecipes México - UC8XjiUYIR6Ik09plixw2tBw
+10 Allrecipes Nederland - UC_O1mM0E9RpRZKzYpkoyiQw
+11 Allrecipes Québec - UCIYl93eYP4q0T38jKVlIUbw
+12 Allrecipes UK | Ireland - UCpwT1H5vi3j5UYapGmYTefA
+13 AllrecipesPL - UCCuHYHL4tkW56fIS9-y23HA
+14 AllrecipesRU - UCW7AfKURFdgmQpyl9-khUlg
+15 American Patchwork & Quilting - UCQznLGBargr-HYg_GVVTmtQ
+16 BBQ&A - UCQhFIJjKcito974ic9JkPCQ
+17 Better Homes and Gardens - UCbNF3nemgJUHJuVRgH7V0YQ
+18 Coastal Living - UCVubLh_HWN95Gzs98kHRF9w
+19 Communal Table Podcast - UCpxALpd2SsNU2dK_aE5Je9w
+20 Cooking Light - UCIAJ7fd67S0XpsWk15jeIcQ
+21 DIGS Channel - UCDsRDw0U4737-nbiuspjlRA
+22 Daily Paws - UCxvafODlT4FIKekotW97C4Q
+23 Departures - UCh4-Pst8lXkuk5fWHMeE73g
+24 EatingWell - UCdRWOGPl3AJ0uZhitlQ9L5A
+25 Entertainment Weekly - UClWCQNaggkMW7SDtS3BkEBg
+26 Everyday Food - UCl0kP-Cfe-GGic7Ilnk-u_Q
+27 Extra Crispy - UCN_AhGqlpiBRKBNfHNKdA8Q
+28 FITNESS Magazine - UCGEHjlrUbMIU2Z4BDAqRTEQ
+29 FOOD & WINE - UCKH_4hkRSyUSHDIFMzlGCRA
+30 Family Circle Magazine - UC-pZk6ngqIrw3wA2b-TqIaQ
+31 Fit Pregnancy - UCXz7iv-YhBadMKDC4oyjEoA
+32 Food Wishes - UCRIZtPl9nb9RiXc9btSTQNw
+33 HG - UCyW-Owx53Zfd2dGlC0PS9JA
+34 Health Magazine - UCF11Yrx9bAy2Q6j6lgo0JwQ
+35 INSTANT - UCFtVfkzbycPU43R6a0NRSzw
+36 InStyle - UCj6iVt0NLGyj406r2kD161g
+37 Kindred - UCmZqGAoOTUlt0mzdeiE9peA
+38 Ladies' Home Journal - UCYfOkxyChqaCw8Te2LT_84A
+39 MORE - UC51Pi85jmAPk6lotxFI0FCA
+40 MagazineDotStore - UClf8fOAgdWiAbDdqYqsKUCQ
+41 Martha Stewart - UC6JBm9OAkpI6NUBV_NsLxTA
+42 Martha Stewart Weddings - UCiRymfQ6vlif2aa_sLglPfA
+43 Midwest Living - UCqULz_ylDKqqtnGBwZLdXYw
+44 Mom VS. - UCHxDKH5zQCKC3GYzx6acNFw
+45 MyRecipes - UCBsi0gbfoSsuczN8rUM5P2Q
+46 Parenting.com - UCKNR8trBLNHUUNApKmgbvBA
+47 Parents - UCvw7rZIoXbNTFBc987hjS6Q
+48 Parents Latina - UCH4CG4AwCAQUW-aqoopDJOQ
+49 People - UCGbQJy-531_5vfphay-rChQ
+50 People en Español - UCneXGesND4MmitQSwlwOupw
+51 Rachael Ray In Season - UC-T7qYxL6dHLxt5n269vLjQ
+52 Real Simple - UC_KvZUUODWErbQGN43Ie9Aw
+53 Recipe.com - UCBhSQrC8xNooBNRX6ooxBFg
+54 SHAPE Magazine - UCxgYBB786NCz0B_MYNXormg
+55 Ser Padres USA - UCJI6FA4_a_ICHsjjW5esoIA
+56 Siempre Mujer - UCVbpQHkFAIkJMPxuO-6YNiw
+57 Southern Living - UCtYty94mQ6on0Q2oqD2erhg
+58 Successful Farming - UC2u5FKMgq3MHk03M2LNr4_Q
+59 The Better Show - UCAFWMY0D2MoZm4nPjFIUqzA
+60 Travel + Leisure - UCFj5HES0-944pC-tjA16XqQ
+61 WOOD magazine - UCa5tzns9weqgEZn5r3kwTww
+62 Well Done - UCBXV31q0rnDbCP9bnwMR7WA
+63 madhungrylsq - UCPJJIZwY8kCkfgvsehsz74g
+64 mywedding - UCqj7eoPAkfnrwUNFf8V-LiQ
+65 traditionalhome - UCpkjv_NBq4QqNM2H4C8WPPg
+
+*/

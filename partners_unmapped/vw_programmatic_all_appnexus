@@ -1,0 +1,95 @@
+## view name: vw_programmatic_all_appnexus
+## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
+## created by: bj.hollowell@meredith.com
+## Last modified on: 3/1/2022
+## Last modified by: bj.hollowell@meredith.com
+## Change log: limiting fields pulled in from raw data source
+##
+##
+## notes:
+##
+
+WITH
+
+appnexus_base AS (
+    SELECT
+        day,
+        publisher_name,
+        placement_name,
+        deal_name,
+        size,
+        media_type,
+        geo_country_name,
+        bidder_name,
+        buyer_member_name,
+        brand_name,
+        deal_id,
+        SUM(revenue) AS revenue,
+        SUM(imps) AS imps,
+        SUM(view_measured_imps) AS view_measured_imps,
+        SUM(imps_viewed) AS imps_viewed
+    FROM `meredith-switchboard.appnexus.seller_brand_review_*`
+    WHERE day >= '2020-01-01'
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11
+),
+
+appnexus_cleaned AS (
+    SELECT
+        'AppNexus API' AS source,
+        CAST(day AS TIMESTAMP) AS date,
+        'Xandr' AS partner,
+        CONCAT('AppNexus', ';', publisher_name, ';', placement_name) AS tag_site,
+        CASE
+            WHEN deal_name = '--' THEN 'Open'
+            ELSE 'PMP'
+            END AS transaction_type,
+        '' AS site,
+        '' AS tier,
+        size AS ad_size_initial,
+        CASE
+            WHEN size = '300x250'  THEN '300x250'
+            WHEN size = '320x50'   THEN '320x50'
+            WHEN size = '728x90'   THEN '728x90'
+            WHEN size = '300x600'  THEN '300x600'
+            WHEN size = '970x250'  THEN '970x250'
+            WHEN size = '970x90'   THEN '970x90'
+            WHEN size = '300x1050' THEN '300x1050'
+            WHEN size = '1x1'      THEN 'Video/Overlay'
+            ELSE 'Other'
+            END AS ad_size,
+        CASE
+            WHEN publisher_name LIKE '%App%' THEN 'App'
+            WHEN publisher_name LIKE '%APP%' THEN 'App'
+            WHEN media_type = 'video'        THEN 'Video'
+            ELSE 'Display'
+            END AS ad_type,
+        CASE
+            WHEN publisher_name LIKE '%A9%' THEN 'TAM'
+            WHEN publisher_name LIKE '%a9%' THEN 'TAM'
+            ELSE 'HB'
+            END AS path_type,
+        '' AS device_type_initial,
+        'to_be_mapped' AS device_type,
+        geo_country_name AS country_initial,
+        CASE
+            WHEN geo_country_name = 'United States' THEN 'USA'
+            WHEN geo_country_name = 'N/A'           THEN 'Unknown'
+            ELSE 'XUS'
+            END AS country,
+        bidder_name AS dsp_initial,
+        buyer_member_name AS buyer_initial,
+        brand_name AS advertiser_initial,
+        CAST(deal_id AS STRING) AS deal_id,
+        deal_name AS deal_name,
+        SUM(revenue) AS net_revenue,
+        SUM((revenue / 0.85)) AS gross_revenue,
+        SUM(imps) AS imps,
+        SUM(view_measured_imps) AS active_view_measured_impressions,
+        SUM(imps_viewed) AS active_view_viewed_impressions,
+        NULL AS bid_requests,
+        NULL AS bid_responses
+    FROM appnexus_base
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
+)
+
+SELECT * FROM appnexus_cleaned

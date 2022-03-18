@@ -1,0 +1,89 @@
+## view name: vw_programmatic_all_teads
+## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
+## created by: bj.hollowell@meredith.com
+## Last modified on: 3/2/2022
+## Last modified by: bj.hollowell@meredith.com
+## Change log: limiting fields pulled in from raw data source
+##
+##
+## notes:
+##
+
+
+WITH
+
+teads_base AS (
+    SELECT
+        day,
+        website_domain,
+        buyer_type,
+        device,
+        country,
+        adsource,
+        advertiser_domain,
+        deal_id_keycode,
+        transaction_type,
+        connection,
+        SUM(income_converted_usd) AS income_converted_usd,
+        SUM(publisher_billable_volume) AS publisher_billable_volume
+    FROM `meredith-switchboard.teads.teads_api_*`
+    WHERE day >= '2020-01-01'
+    GROUP BY 1,2,3,4,5,6,7,8,9,10
+),
+
+teads_cleaned AS (
+    SELECT
+        'Teads API2' AS source,
+        CAST(day AS TIMESTAMP) AS date,
+        'Teads' AS partner,
+        CONCAT('Teads', ';', website_domain) AS tag_site,
+        CASE
+            WHEN buyer_type LIKE 'office' THEN 'Open'
+            ELSE 'PMP'
+            END AS transaction_type,
+        '' AS site,
+        '' AS tier,
+        '' AS ad_size_initial,
+        'Native' AS ad_size,
+        'NonGam Outstream' AS ad_type,
+        'Selectable Tag' AS path_type,
+        device AS device_type_initial,
+        CASE
+            WHEN device LIKE 'Smartphone' THEN 'MobileWeb'
+            WHEN device LIKE 'Tablet'     THEN 'Desktop'
+            WHEN device LIKE 'Desktop'    THEN 'Desktop'
+            WHEN device LIKE 'iPad'       THEN 'Desktop'
+            WHEN device LIKE 'IPad'       THEN 'Desktop'
+            WHEN device LIKE 'SmartTV'    THEN 'Connected TV'
+            ELSE device
+            END AS device_type,
+        country AS country_initial,
+        CASE
+            WHEN country LIKE 'United States' THEN 'USA'
+            WHEN country LIKE 'N/A'           THEN 'Unknown'
+            WHEN country LIKE 'n/a'           THEN 'Unknown'
+            ELSE 'XUS'
+            END AS country,
+        adsource AS dsp_initial,
+        'Unknown' AS buyer_initial,
+        advertiser_domain AS advertiser_initial,
+        deal_id_keycode AS deal_id,
+        CASE
+            WHEN transaction_type LIKE 'Open' THEN 'Open'
+            ELSE connection
+            END AS deal_name,
+        SUM(CASE
+            WHEN transaction_type LIKE 'PMP' THEN income_converted_usd * 0.85
+            ELSE income_converted_usd
+            END ) AS net_revenue,
+        SUM(income_converted_usd) AS gross_revenue,
+        SUM(publisher_billable_volume) AS imps,
+        NULL AS active_view_measured_impressions,
+        NULL AS active_view_viewed_impressions,
+        NULL AS bid_requests,
+        NULL AS bid_responses
+    FROM teads_base
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
+)
+
+SELECT * FROM teads_cleaned
