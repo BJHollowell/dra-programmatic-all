@@ -1,11 +1,11 @@
 ## view name: vw_programmatic_all_index
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on: 3/14/2022
-## Last modified by:
-## Change log:  add creative_type to raw data for ad_type logic to 'Video'
-##
-## notes: OB files are pre-July 2020 and static tables saved in BQ. the rest of the data is pulled from GCS data (moved from S3)
+## Last modified on: 3/22/2022
+## Last modified by: bj.hollowell@meredith.com
+## Change log:  3/22/2022 Removed individual mapping within partner views so it can all be done once in prod version.
+##              Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
+## notes:
 ##
 
 WITH
@@ -211,7 +211,7 @@ index_unioned AS (
         deal_id,
         deal_name,
         SUM(net_revenue) AS net_revenue,
-        SUM(gross_revenue AS gross_revenue,
+        SUM(gross_revenue) AS gross_revenue,
         SUM(imps) AS imps,
         NULL AS active_view_measured_impressions,
         NULL AS active_view_viewed_impressions,

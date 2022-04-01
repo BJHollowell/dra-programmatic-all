@@ -1,11 +1,10 @@
 ## view name: vw_programmatic_all_youtube
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on: 3/2/2022
+## Last modified on: 3/22/2022
 ## Last modified by: bj.hollowell@meredith.com
-## Change log: limiting fields pulled in from raw data source
-##
-##
+## Change log:  3/22/2022 Removed individual mapping within partner views so it can all be done once in prod version.
+##              Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
 ## notes:
 ##
 
@@ -54,7 +53,7 @@ youtube_cleaned AS (
         CONCAT('YouTube', ';', channel_title) AS tag_site,
         'Open' AS transaction_type,
         '' AS site,
-        'No Tier' AS tier,
+        'NoTier' AS tier,
         '' AS ad_size_initial,
         'Video/Overlay' AS ad_size,
         'Video' AS ad_type,
@@ -79,7 +78,7 @@ youtube_cleaned AS (
         NULL AS bid_requests,
         NULL AS bid_responses
     FROM youtube_base
-    WHERE tag_site IS NOT NULL
+    WHERE channel_title IS NOT NULL
     GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
 )
 

@@ -1,11 +1,10 @@
 ## view name: vw_programmatic_all_rubicon
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on:
-## Last modified by:
-## Change log:
-##
-##
+## Last modified on: 3/22/2022
+## Last modified by: bj.hollowell@meredith.com
+## Change log:  3/22/2022 Removed individual mapping within partner views so it can all be done once in prod version.
+##              Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
 ## notes:
 ##
 
@@ -24,13 +23,12 @@ rubicon_base AS (
         buyer,
         advertiser,
         deal_id,
-        deal,
         SUM(revenue) AS revenue,
         SUM(paid_impressions) AS paid_impressions
         --_table_suffix AS table_id
     FROM `meredith-switchboard.rubicon.rubicon_summary_v2_*`
     WHERE date >= '2020-01-01' AND paid_impressions <> 0
-    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11
 ),
 
 rubicon_cleaned AS (
@@ -102,4 +100,4 @@ rubicon_cleaned AS (
     GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
 )
 
-SELECT * FROM rubicon_mapped
+SELECT * FROM rubicon_cleaned

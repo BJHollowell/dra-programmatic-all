@@ -185,6 +185,8 @@ AdX_mvp_partner_mapped AS (
             WHEN tag_site  LIKE '%vdn.oath%'     OR tag_site  LIKE '%mvp.oath%'     THEN 'Oath'
             WHEN tag_site  LIKE '%vdn.tout%'     OR tag_site  LIKE '%mvp.tout%'     THEN 'tout'
             WHEN tag_site  LIKE '%vdn.viant%'    OR tag_site  LIKE '%mvp.viant%'    OR tag_site  LIKE '%amplify.viant%' THEN 'Viant'
+            WHEN tag_site  LIKE '%vdn.stn%'      OR tag_site  LIKE '%mvp.stn%'      THEN 'STN'
+            WHEN tag_site  LIKE '%vdn.yahoo%'    OR tag_site  LIKE '%mvp.yahoo%'    THEN 'Yahoo'
             ## ott-specific ad units
             WHEN tag_site  LIKE '%vdn.ott.peotv.cwseed.video%'     OR tag_site  LIKE '%mvp.ott.peotv.cwseed.video%'     THEN 'CW'
             WHEN tag_site  LIKE '%vdn.ott.peotv.LocalNow.video%'   OR tag_site  LIKE '%mvp.ott.peotv.LocalNow.video%'   THEN 'Local Now'
@@ -193,123 +195,12 @@ AdX_mvp_partner_mapped AS (
             WHEN tag_site  LIKE '%vdn.ott.peotv.tubitv.video%'     OR tag_site  LIKE '%mvp.ott.peotv.tubitv.video%'     THEN 'Tubi'
             WHEN tag_site  LIKE '%vdn.ott.peotv.verizonamz.video%' OR tag_site  LIKE '%mvp.ott.peotv.verizonamz.video%' THEN 'Verizon AMZ'
             WHEN tag_site  LIKE '%vdn.ott.peotv.xumo.video%'       OR tag_site  LIKE '%mvp.ott.peotv.xumo.video%'       THEN 'Xumo'
+            WHEN tag_site  LIKE '%vdn.ott.peotv.vizio.video%'      OR tag_site  LIKE '%mvp.ott.peotv.vizio.video%'      THEN 'Vizio'
             ## SSP vdn/mvp (placeholder until we get that field into progall and then DARLA)
             WHEN UPPER(ad_type) = 'VDN' OR UPPER(ad_type) = 'MVP' THEN 'MVP - Programmatic'
             ELSE NULL
             END AS mvp_partner
         FROM AdX_programmatic_all_tagged
-),
-
-programmatic_all_untagged AS(
-    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_index`
-
-    UNION ALL
-
-    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_trustx`
-
-    UNION ALL
-
-    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_teads`
-
-    UNION ALL
-
-    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_amazon_open`
-
-    UNION ALL
-
-    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_amazon_pmp`
-
-    UNION ALL
-
-    SELECT * FROM `meredith-switchboard.programmatic_all.vw_rubicon_programmatic_all`
-
-    UNION ALL
-
-    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_roundel`
-
-    UNION ALL
-
-    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_openx`
-
-    UNION ALL
-
-    SELECT * FROM  `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_pubmatic`
-
-    UNION ALL
-
-    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_spotx`
-
-    UNION ALL
-
-    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_appnexus`
-
-    UNION ALL
-
-    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_medianet`
-
-    UNION ALL
-
-    SELECT * FROM  `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_rogers`
-
-    UNION ALL
-
-    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_liveintent`
-
-    UNION ALL
-
-    SELECT * FROM  `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_nativo`
-
-    UNION ALL
-
-    SELECT * FROM  `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_adsense`
-
-    UNION ALL
-
-    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_solve`
-
-    UNION ALL
-
-    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_kargo`
-
-    UNION ALL
-
-    SELECT * FROM  `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_gumgum`
-
-    UNION ALL
-
-    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_outbrain`
-
-    UNION ALL
-
-    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_videointelligence`
-
-    UNION ALL
-
-    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_youtube`
-
-    UNION ALL
-
-    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_yieldmo`
-
-    UNION ALL
-
-    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_triplelift`
-
-    UNION ALL
-
-    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_jeeng`
-
-    UNION ALL
-
-    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_aax`
-
-    UNION ALL
-
-    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_yahoo`
-
-    UNION ALL
-
-    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_pacific`
 ),
 
 programmatic_all_tagged AS (
@@ -320,23 +211,23 @@ programmatic_all_tagged AS (
         A.tag_site,
         A.transaction_type,
         CASE
-            WHEN A.site IS NOT NULL THEN A.site
+            WHEN A.site <> '' THEN A.site
             ELSE B.site
             END AS site,
         CASE
-            WHEN A.tier IS NOT NULL THEN A.tier
+            WHEN A.tier <> '' THEN A.tier
             ELSE B.tier
             END AS tier,
         A.ad_size_initial,
         CASE
-            WHEN A.ad_size = 'to_be_mapped' THEN B.ad_size
+            WHEN A.ad_size = 'to_be_mapped' THEN B.adsize
             ELSE A.ad_size
             END AS ad_size,
         A.ad_type,
         A.path_type,
         A.device_type_initial,
         CASE
-            WHEN A.device_type = 'to_be_mapped' THEN B.device_type
+            WHEN A.device_type = 'to_be_mapped' THEN B.device
             ELSE A.device_type
             END AS device_type,
         A.country_initial,
@@ -365,7 +256,7 @@ programmatic_all_tagged AS (
         C.holdco AS holdco,
         C.agency,
         '' AS mvp_partner
-    FROM programmatic_all_untagged AS A
+    FROM `meredith-switchboard.zzz_bj_progall_test.tbl_programmatic_all_partner_data_test` AS A
 
     LEFT JOIN `meredith-switchboard.summary_reports.programmatic_tag_mapping` AS B
     ON A.tag_site = B.tag_site
@@ -396,6 +287,28 @@ programmatic_all AS (
     SELECT * FROM programmatic_all_tagged
 ),
 
+advertiser_cleanup_map AS (
+    SELECT
+        Advertiser,
+        SUM(net_revenue) AS total_earned
+    FROM programmatic_all
+    GROUP BY 1
+    HAVING total_earned >= 1000
+),
+
+advertiser_cleanup AS (
+    SELECT
+        A.* EXCEPT(Advertiser),
+        CASE
+          WHEN B.Advertiser IS NULL AND A.Advertiser IS NOT NULL THEN 'Other - Not Enough Spend'
+          ELSE A.Advertiser
+          END AS Advertiser
+    FROM programmatic_all AS A
+
+    LEFT JOIN advertiser_cleanup_map AS B
+    ON A.Advertiser = B.Advertiser
+),
+
 Vertical_mapping_table AS (
     SELECT
         top_parent_account,
@@ -408,7 +321,7 @@ programmatic_all_mapped AS (
     SELECT
         A.*,
         B.parent_account_revised_industry AS vertical
-    FROM programmatic_all AS A
+    FROM advertiser_cleanup AS A
 
     LEFT JOIN Vertical_mapping_table AS B
     ON A.advertiser = B.top_parent_account

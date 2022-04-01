@@ -1,11 +1,10 @@
 ## view name: vw_programmatic_all_nativo
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on: 3/1/2022
+## Last modified on: 3/22/2022
 ## Last modified by: bj.hollowell@meredith.com
-## Change log:  3/1/2022 BJ amended the base steps to limit fields brought in, dedupe within that step and aggregate
-##              progall was taking too long to process and it was due to steps like those. this will cut down processing
-##
+## Change log:  3/22/2022 Removed individual mapping within partner views so it can all be done once in prod version.
+##              Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
 ## notes:
 ##
 
@@ -59,7 +58,7 @@ nativo_cleaned AS (
         '' AS site,
         CASE
             WHEN integration_type_name IN('Exchange', 'Header (Server-side)') THEN 'Unknown'
-            ELSE 'No Tier'
+            ELSE 'NoTier'
             END AS tier,
         '' AS ad_size_initial,
         CASE

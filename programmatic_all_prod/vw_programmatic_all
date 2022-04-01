@@ -178,34 +178,37 @@ WITH
     ON UPPER(A.Advertiser_initial) = E.advertiser_from_source
     ),
 
-  VDN_partner_mapping AS (
-      SELECT
-        *,
-        CASE
-            ## standard vdn/mvp ad units
-            WHEN Tag_Site  LIKE '%vdn.cedato%'   OR Tag_Site  LIKE '%mvp.cedato%'   THEN 'Cedato'
-            WHEN Tag_Site  LIKE '%vdn.comcast%'  OR Tag_Site  LIKE '%mvp.comcast%'  THEN 'Comcast'
-            WHEN Tag_Site  LIKE '%vdn.connatix%' OR Tag_Site  LIKE '%mvp.connatix%' THEN 'Connatix'
-            WHEN Tag_Site  LIKE '%vdn.dailym%'   OR Tag_Site  LIKE '%mvp.dailym%'   THEN 'Daily Motion'
-            WHEN Tag_Site  LIKE '%vdn.iristv%'   OR Tag_Site  LIKE '%mvp.iristv%'   THEN 'Iris TV'
-            WHEN Tag_Site  LIKE '%vdn.msn%'      OR Tag_Site  LIKE '%mvp.msn%'      THEN 'MSN'
-            WHEN Tag_Site  LIKE '%vdn.oath%'     OR Tag_Site  LIKE '%mvp.oath%'     THEN 'Oath'
-            WHEN Tag_Site  LIKE '%vdn.tout%'     OR Tag_Site  LIKE '%mvp.tout%'     THEN 'tout'
-            WHEN Tag_Site  LIKE '%vdn.viant%'    OR Tag_Site  LIKE '%mvp.viant%'    OR Tag_Site  LIKE '%amplify.viant%' THEN 'Viant'
-            ## ott-specific ad units
-            WHEN Tag_Site  LIKE '%vdn.ott.peotv.cwseed.video%'     OR Tag_Site  LIKE '%mvp.ott.peotv.cwseed.video%'     THEN 'CW'
-            WHEN Tag_Site  LIKE '%vdn.ott.peotv.LocalNow.video%'   OR Tag_Site  LIKE '%mvp.ott.peotv.LocalNow.video%'   THEN 'Local Now'
-            WHEN Tag_Site  LIKE '%vdn.ott.peotv.Plex.video%'       OR Tag_Site  LIKE '%mvp.ott.peotv.Plex.video%'       THEN 'Plex'
-            WHEN Tag_Site  LIKE '%vdn.ott.peotv.pluto.video%'      OR Tag_Site  LIKE '%mvp.ott.peotv.pluto.video%'      THEN 'Pluto'
-            WHEN Tag_Site  LIKE '%vdn.ott.peotv.tubitv.video%'     OR Tag_Site  LIKE '%mvp.ott.peotv.tubitv.video%'     THEN 'Tubi'
-            WHEN Tag_Site  LIKE '%vdn.ott.peotv.verizonamz.video%' OR Tag_Site  LIKE '%mvp.ott.peotv.verizonamz.video%' THEN 'Verizon AMZ'
-            WHEN Tag_Site  LIKE '%vdn.ott.peotv.xumo.video%'       OR Tag_Site  LIKE '%mvp.ott.peotv.xumo.video%'       THEN 'Xumo'
-            ## SSP vdn/mvp (placeholder until we get that field into progall and then DARLA)
-            WHEN UPPER(ad_type) = 'VDN' OR UPPER(ad_type) = 'MVP' THEN 'MVP - Programmatic'
-            ELSE NULL
-            END AS mvp_partner
-        FROM AdX_programmatic_all_tagged
-  ),
+  AdX_mvp_partner_mapped AS (
+        SELECT
+            *,
+            CASE
+                ## standard vdn/mvp ad units
+                WHEN tag_site  LIKE '%vdn.cedato%'   OR tag_site  LIKE '%mvp.cedato%'   THEN 'Cedato'
+                WHEN tag_site  LIKE '%vdn.comcast%'  OR tag_site  LIKE '%mvp.comcast%'  THEN 'Comcast'
+                WHEN tag_site  LIKE '%vdn.connatix%' OR tag_site  LIKE '%mvp.connatix%' THEN 'Connatix'
+                WHEN tag_site  LIKE '%vdn.dailym%'   OR tag_site  LIKE '%mvp.dailym%'   THEN 'Daily Motion'
+                WHEN tag_site  LIKE '%vdn.iristv%'   OR tag_site  LIKE '%mvp.iristv%'   THEN 'Iris TV'
+                WHEN tag_site  LIKE '%vdn.msn%'      OR tag_site  LIKE '%mvp.msn%'      THEN 'MSN'
+                WHEN tag_site  LIKE '%vdn.oath%'     OR tag_site  LIKE '%mvp.oath%'     THEN 'Oath'
+                WHEN tag_site  LIKE '%vdn.tout%'     OR tag_site  LIKE '%mvp.tout%'     THEN 'tout'
+                WHEN tag_site  LIKE '%vdn.viant%'    OR tag_site  LIKE '%mvp.viant%'    OR tag_site  LIKE '%amplify.viant%' THEN 'Viant'
+                WHEN tag_site  LIKE '%vdn.stn%'      OR tag_site  LIKE '%mvp.stn%'      THEN 'STN'
+                WHEN tag_site  LIKE '%vdn.yahoo%'    OR tag_site  LIKE '%mvp.yahoo%'    THEN 'Yahoo'
+                ## ott-specific ad units
+                WHEN tag_site  LIKE '%vdn.ott.peotv.cwseed.video%'     OR tag_site  LIKE '%mvp.ott.peotv.cwseed.video%'     THEN 'CW'
+                WHEN tag_site  LIKE '%vdn.ott.peotv.LocalNow.video%'   OR tag_site  LIKE '%mvp.ott.peotv.LocalNow.video%'   THEN 'Local Now'
+                WHEN tag_site  LIKE '%vdn.ott.peotv.Plex.video%'       OR tag_site  LIKE '%mvp.ott.peotv.Plex.video%'       THEN 'Plex'
+                WHEN tag_site  LIKE '%vdn.ott.peotv.pluto.video%'      OR tag_site  LIKE '%mvp.ott.peotv.pluto.video%'      THEN 'Pluto'
+                WHEN tag_site  LIKE '%vdn.ott.peotv.tubitv.video%'     OR tag_site  LIKE '%mvp.ott.peotv.tubitv.video%'     THEN 'Tubi'
+                WHEN tag_site  LIKE '%vdn.ott.peotv.verizonamz.video%' OR tag_site  LIKE '%mvp.ott.peotv.verizonamz.video%' THEN 'Verizon AMZ'
+                WHEN tag_site  LIKE '%vdn.ott.peotv.xumo.video%'       OR tag_site  LIKE '%mvp.ott.peotv.xumo.video%'       THEN 'Xumo'
+                WHEN tag_site  LIKE '%vdn.ott.peotv.vizio.video%'      OR tag_site  LIKE '%mvp.ott.peotv.vizio.video%'      THEN 'Vizio'
+                ## SSP vdn/mvp (placeholder until we get that field into progall and then DARLA)
+                WHEN UPPER(ad_type) = 'VDN' OR UPPER(ad_type) = 'MVP' THEN 'MVP - Programmatic'
+                ELSE NULL
+                END AS mvp_partner
+            FROM AdX_programmatic_all_tagged
+    ),
 
   programmatic_all_untagged AS(
   SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_index`

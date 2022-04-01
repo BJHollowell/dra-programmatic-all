@@ -1,11 +1,10 @@
 ## view name: vw_programmatic_all_amazon_open
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on: 2/18/2022
-## Last modified by: andy.bieber@meredith.com
-## Change log: 2/18/2022 updated Verizon TAM partner to surface as "Yahoo"
-##
-##
+## Last modified on: 3/22/2022
+## Last modified by: bj.hollowell@meredith.com
+## Change log:  3/22/2022 Removed individual mapping within partner views so it can all be done once in prod version.
+##              Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
 ## notes:
 ##
 
@@ -187,46 +186,51 @@ amazon_open_cleaned AS (
         AND bidder_name NOT LIKE '%AdColony%'
         AND bidder_name NOT LIKE '%Nativo%'
     GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
+),
+
+amazon_open_final AS (
+    SELECT
+        source,
+        date,
+        partner,
+        tag_site,
+        transaction_type,
+        site,
+        tier,
+        ad_size_initial,
+        ad_size,
+        ad_type,
+        path_type,
+        device_type_initial,
+        device_type,
+        country_initial,
+        country,
+        dsp_initial,
+        buyer_initial,
+        advertiser_initial,
+        deal_id,
+        deal_name,
+        net_revenue,
+        CASE
+            WHEN partner = 'DistrictM' THEN (gross_revenue / 0.90)
+            WHEN partner = 'DMX' THEN (gross_revenue / 0.90)
+            WHEN partner = 'EMX' THEN (gross_revenue / 0.90)
+            WHEN partner = 'GumGum' THEN (gross_revenue / 0.90)
+            WHEN partner = 'Pubmatic' THEN (gross_revenue / 0.82)
+            WHEN partner = 'Pulsepoint' THEN (gross_revenue / 0.80)
+            WHEN partner = 'Sharethrough' THEN (gross_revenue / 0.90)
+            WHEN partner = 'Sonobi' THEN (gross_revenue / 0.85)
+            WHEN partner = 'Verizon' THEN (gross_revenue / 0.85)
+            WHEN partner = 'YieldMo' THEN (gross_revenue / 0.70)
+            ELSE gross_revenue
+            END AS gross_revenue,
+        imps,
+        active_view_measured_impressions,
+        active_view_viewed_impressions,
+        bid_requests,
+        bid_responses
+    FROM amazon_open_cleaned
 )
 
-SELECT
-    source,
-    date,
-    partner,
-    tag_site,
-    transaction_type,
-    --site,
-    --tier,
-    ad_size_initial,
-    ad_size,
-    ad_type,
-    path_type,
-    device_type_initial,
-    device_type,
-    country_initial,
-    country,
-    dsp_initial,
-    buyer_initial,
-    advertiser_initial,
-    deal_id,
-    deal_name,
-    net_revenue,
-    CASE
-        WHEN partner = 'DistrictM' THEN (gross_revenue / 0.90)
-        WHEN partner = 'DMX' THEN (gross_revenue / 0.90)
-        WHEN partner = 'EMX' THEN (gross_revenue / 0.90)
-        WHEN partner = 'GumGum' THEN (gross_revenue / 0.90)
-        WHEN partner = 'Pubmatic' THEN (gross_revenue / 0.82)
-        WHEN partner = 'Pulsepoint' THEN (gross_revenue / 0.80)
-        WHEN partner = 'Sharethrough' THEN (gross_revenue / 0.90)
-        WHEN partner = 'Sonobi' THEN (gross_revenue / 0.85)
-        WHEN partner = 'Verizon' THEN (gross_revenue / 0.85)
-        WHEN partner = 'YieldMo' THEN (gross_revenue / 0.70)
-        ELSE gross_revenue
-        END AS gross_revenue,
-    imps,
-    active_view_measured_impressions,
-    active_view_viewed_impressions,
-    bid_requests,
-    bid_responses
-FROM amazon_open_cleaned
+
+SELECT * FROM amazon_open_final

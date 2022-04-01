@@ -1,11 +1,10 @@
 ## view name: vw_programmatic_all_yieldmo
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on: 3/2/2022
+## Last modified on: 3/22/2022
 ## Last modified by: bj.hollowell@meredith.com
-## Change log: limiting fields pulled in from raw data source
-##
-##
+## Change log:  3/22/2022 Removed individual mapping within partner views so it can all be done once in prod version.
+##              Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
 ## notes:
 ##
 
@@ -36,11 +35,11 @@ yieldmo_backfill AS (
         SUM(net_revenue) AS net_revenue,
         SUM(gross_revenue) AS gross_revenue,
         SUM(imps) AS imps,
-        CAST(SUM(active_view_measured_impressions) AS INT64) AS active_view_measured_impressions,
-        CAST(SUM(active_view_viewed_impressions) AS INT64) AS active_view_viewed_impressions,
-        CAST(SUM(bid_requests) AS INT64) AS bid_requests,
+        SUM(CAST(active_view_measured_impressions AS INT64)) AS active_view_measured_impressions,
+        SUM(CAST(active_view_viewed_impressions AS INT64)) AS active_view_viewed_impressions,
+        SUM(CAST(bid_requests AS INT64)) AS bid_requests,
 ## look into yieldmo backfill to see if the field is actually repsonses?
-        CAST(SUM(bid_repsonses) AS INT64) AS bid_responses
+        SUM(CAST(bid_repsonses AS INT64)) AS bid_responses
     FROM `meredith-switchboard.yieldmo.yieldmo_meredith_allsites_backfill_data`
     GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
 ),

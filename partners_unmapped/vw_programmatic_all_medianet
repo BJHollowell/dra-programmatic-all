@@ -1,22 +1,14 @@
 ## view name: vw_programmatic_all_medianet
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on:
-## Last modified by:
-## Change log:
-##
-##
+## Last modified on: 3/22/2022
+## Last modified by: bj.hollowell@meredith.com
+## Change log:  3/22/2022 Removed individual mapping within partner views so it can all be done once in prod version.
+##              Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
 ## notes:
 ##
 
 WITH
-
-prog_tag_map AS (
-    SELECT
-        * EXCEPT(tag_site),
-        tag_site AS tag_site_map
-    FROM `meredith-switchboard.summary_reports.programmatic_tag_mapping`
-),
 
 medianet_channelwise_old AS (
     SELECT
@@ -52,7 +44,7 @@ medianet_channelwise_cleaned AS (
         CONCAT('Media.net', ';', channel) AS tag_site,
         'Open' AS transaction_type,
         '' AS site,
-        'No Tier' AS tier,
+        'NoTier' AS tier,
         '' AS ad_size_initial,
         'to_be_mapped' AS ad_size,
         'NonGam Display' AS ad_type,
@@ -130,7 +122,7 @@ medianet_deals_cleaned AS (
 ),
 
 medianet_final AS (
-    SELECT * FROM  medianet_channelwise_mapped
+    SELECT * FROM  medianet_channelwise_cleaned
     UNION ALL
     SELECT * FROM medianet_deals_cleaned
 )
