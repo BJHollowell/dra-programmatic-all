@@ -1,9 +1,9 @@
 ## view name: vw_programmatic_all_partner_data
 ## description: view for union of all individual programmatic partner views/data
 ## created by: BJ Hollowell bj.hollowell@meredith.com
-## Last modified on:
-## Last modified by:
-## Change log: 
+## Last modified on: 4/1/22
+## Last modified by: bj.hollowell@meredith.com
+## Change log: updated partner view locations out of test environment to production
 ##
 ## notes:
 ##
@@ -12,115 +12,115 @@
 WITH
 
 programmatic_all_untagged AS(
-    SELECT * FROM `meredith-switchboard.zzz_bj_progall_test.vw_programmatic_all_index`
+    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_index`
 
     UNION ALL
 
-    SELECT * FROM `meredith-switchboard.zzz_bj_progall_test.vw_programmatic_all_trustx`
+    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_trustx`
 
     UNION ALL
 
-    SELECT * FROM `meredith-switchboard.zzz_bj_progall_test.vw_programmatic_all_teads`
+    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_teads`
 
     UNION ALL
 
-    SELECT * FROM `meredith-switchboard.zzz_bj_progall_test.vw_programmatic_all_amazon_open`
+    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_amazon_open`
 
     UNION ALL
 
-    SELECT * FROM `meredith-switchboard.zzz_bj_progall_test.vw_programmatic_all_amazon_pmp`
+    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_amazon_pmp`
 
     UNION ALL
 
-    SELECT * FROM `meredith-switchboard.zzz_bj_progall_test.temp_rubicon`
+    SELECT * FROM `meredith-switchboard.programmatic_all_partners.temp_rubicon`
 
     UNION ALL
 
-    SELECT * FROM `meredith-switchboard.zzz_bj_progall_test.vw_programmatic_all_roundel`
+    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_roundel`
 
     UNION ALL
 
-    SELECT * FROM `meredith-switchboard.zzz_bj_progall_test.vw_programmatic_all_openx`
+    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_openx`
 
     UNION ALL
 
-    SELECT * FROM  `meredith-switchboard.zzz_bj_progall_test.vw_programmatic_all_pubmatic`
+    SELECT * FROM  `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_pubmatic`
 
     UNION ALL
 
-    SELECT * FROM `meredith-switchboard.zzz_bj_progall_test.vw_programmatic_all_spotx`
+    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_spotx`
 
     UNION ALL
 
-    SELECT * FROM `meredith-switchboard.zzz_bj_progall_test.vw_programmatic_all_appnexus`
+    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_appnexus`
 
     UNION ALL
 
-    SELECT * FROM `meredith-switchboard.zzz_bj_progall_test.vw_programmatic_all_medianet`
+    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_medianet`
 
     UNION ALL
 
-    SELECT * FROM  `meredith-switchboard.zzz_bj_progall_test.vw_programmatic_all_rogers`
+    SELECT * FROM  `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_rogers`
 
     UNION ALL
 
-    SELECT * FROM `meredith-switchboard.zzz_bj_progall_test.vw_programmatic_all_liveintent`
+    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_liveintent`
 
     UNION ALL
 
-    SELECT * FROM  `meredith-switchboard.zzz_bj_progall_test.vw_programmatic_all_nativo`
+    SELECT * FROM  `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_nativo`
 
     UNION ALL
 
-    SELECT * FROM  `meredith-switchboard.zzz_bj_progall_test.vw_programmatic_all_adsense`
+    SELECT * FROM  `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_adsense`
 
     UNION ALL
 
-    SELECT * FROM `meredith-switchboard.zzz_bj_progall_test.vw_programmatic_all_solve`
+    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_solve`
 
     UNION ALL
 
-    SELECT * FROM `meredith-switchboard.zzz_bj_progall_test.vw_programmatic_all_kargo`
+    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_kargo`
 
     UNION ALL
 
-    SELECT * FROM  `meredith-switchboard.zzz_bj_progall_test.vw_programmatic_all_gumgum`
+    SELECT * FROM  `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_gumgum`
 
     UNION ALL
 
-    SELECT * FROM `meredith-switchboard.zzz_bj_progall_test.vw_programmatic_all_outbrain`
+    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_outbrain`
 
     UNION ALL
 
-    SELECT * FROM `meredith-switchboard.zzz_bj_progall_test.vw_programmatic_all_videointelligence`
+    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_videointelligence`
 
     UNION ALL
 
-    SELECT * FROM `meredith-switchboard.zzz_bj_progall_test.vw_programmatic_all_youtube`
+    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_youtube`
 
     UNION ALL
 
-    SELECT * FROM `meredith-switchboard.zzz_bj_progall_test.vw_programmatic_all_yieldmo`
+    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_yieldmo`
 
     UNION ALL
 
-    SELECT * FROM `meredith-switchboard.zzz_bj_progall_test.vw_programmatic_all_triplelift`
+    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_triplelift`
 
     UNION ALL
 
-    SELECT * FROM `meredith-switchboard.zzz_bj_progall_test.vw_programmatic_all_jeeng`
+    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_jeeng`
 
     UNION ALL
 
-    SELECT * FROM `meredith-switchboard.zzz_bj_progall_test.vw_programmatic_all_aax`
+    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_aax`
 
     UNION ALL
 
-    SELECT * FROM `meredith-switchboard.zzz_bj_progall_test.vw_programmatic_all_yahoo`
+    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_yahoo`
 
     UNION ALL
 
-    SELECT * FROM `meredith-switchboard.zzz_bj_progall_test.vw_programmatic_all_pacific`
+    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_pacific`
 )
 
 SELECT * FROM programmatic_all_untagged

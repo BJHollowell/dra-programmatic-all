@@ -256,7 +256,7 @@ programmatic_all_tagged AS (
         C.holdco AS holdco,
         C.agency,
         '' AS mvp_partner
-    FROM `meredith-switchboard.zzz_bj_progall_test.tbl_programmatic_all_partner_data_test` AS A
+    FROM `meredith-switchboard.programmatic_all.tbl_programmatic_all_nonAdX_partner_aggregate` AS A
 
     LEFT JOIN `meredith-switchboard.summary_reports.programmatic_tag_mapping` AS B
     ON A.tag_site = B.tag_site
