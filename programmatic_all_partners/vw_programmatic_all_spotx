@@ -1,11 +1,10 @@
 ## view name: vw_programmatic_all_spotx
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on: 3/1/2022
+## Last modified on: 3/22/2022
 ## Last modified by: bj.hollowell@meredith.com
-## Change log:  3/1/2022 BJ amended the base steps to limit fields brought in, dedupe within that step and aggregate
-##              progall was taking too long to process and it was due to steps like those. this will cut down processing
-##
+## Change log:  3/22/2022 Removed individual mapping within partner views so it can all be done once in prod version.
+##              Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
 ## notes:
 ##
 
@@ -63,8 +62,8 @@ spotx_cleaned AS (
             WHEN deal_id = 'spotx' THEN 'Open'
             ELSE 'PMP'
             END AS transaction_type,
-        --'' AS site,
-        --'' AS tier,
+        '' AS site,
+        'NoTier' AS tier,
         '' AS ad_size_initial,
         'Video/Overlay' AS ad_size,
         'Video' AS ad_type,
@@ -85,18 +84,19 @@ spotx_cleaned AS (
         advertiser_domain AS advertiser_initial,
         deal_id AS deal_id,
         deal_name AS deal_name,
-        CASE
+        SUM(CASE
             WHEN channel_name LIKE '%Gloss%' THEN (net_revenue_usd * 0.65)
             WHEN channel_name LIKE 'Gloss%'  THEN (net_revenue_usd * 0.65)
             ELSE net_revenue_usd
-            END AS net_revenue,
-        gross_revenue_usd AS gross_revenue,
-        impressions AS imps,
+            END ) AS net_revenue,
+        SUM(gross_revenue_usd) AS gross_revenue,
+        SUM(impressions) AS imps,
         NULL AS active_view_measured_impressions,
         NULL AS active_view_viewed_impressions,
         NULL AS bid_requests,
         NULL AS bid_responses
     FROM spotx_base
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
 )
 
 SELECT * FROM spotx_cleaned

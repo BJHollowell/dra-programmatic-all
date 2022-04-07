@@ -1,11 +1,11 @@
 ## view name: vw_programmatic_all_index
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on: 3/14/2022
-## Last modified by:
-## Change log:  add creative_type to raw data for ad_type logic to 'Video'
-##
-## notes: OB files are pre-July 2020 and static tables saved in BQ. the rest of the data is pulled from GCS data (moved from S3)
+## Last modified on: 3/22/2022
+## Last modified by: bj.hollowell@meredith.com
+## Change log:  3/22/2022 Removed individual mapping within partner views so it can all be done once in prod version.
+##              Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
+## notes:
 ##
 
 WITH
@@ -29,7 +29,9 @@ index_base AS (
         trading_desk_id,
         site_id
     FROM `meredith-switchboard.indexexchange_audit_logs.indexexchange_impression_log`
-    WHERE TIMESTAMP_MILLIS(timestamp) >= '2020-01-01'
+    WHERE
+        TIMESTAMP_MILLIS(timestamp) >= '2020-01-01' AND
+        supply_source <> 'ebda'
 ),
 
 index_mapped AS (
@@ -69,14 +71,6 @@ index_mapped AS (
     GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
 ),
 
-## only runs from 1/1/2020 - 7/1/2020
-index_OB_base AS (
-    SELECT
-        *,
-        _table_suffix AS table_id
-    FROM `meredith-switchboard.programmatic_all.index_exchange_OB_programmatic_all_*`
-),
-
 index_cleaned AS (
     SELECT
         --mdpfiledate,
@@ -88,8 +82,8 @@ index_cleaned AS (
             WHEN deal_type IS NULL THEN 'Open'
             ELSE 'PMP'
             END AS transaction_type,
-        --'' AS site,
-        --'' AS tier,
+        '' AS site,
+        '' AS tier,
         CASE
             WHEN size = '300x250'       THEN '300x250'
             WHEN size = '320x50'        THEN '320x50'
@@ -161,9 +155,9 @@ index_cleaned AS (
             WHEN deal_name IS NULL THEN 'Open'
             ELSE deal_name
             END AS deal_name,
-        net_revenue AS net_revenue,
-        gross_revenue AS gross_revenue,
-        impressions AS imps,
+        SUM(net_revenue) AS net_revenue,
+        SUM(gross_revenue) AS gross_revenue,
+        SUM(impressions) AS imps,
         NULL AS active_view_measured_impressions,
         NULL AS active_view_viewed_impressions,
         NULL AS bid_requests,
@@ -171,51 +165,14 @@ index_cleaned AS (
         --indexexchange_audit_log_source_filename AS filename,
         --switchboard_processing_time
     FROM index_mapped
-    WHERE supply_source <> 'ebda'
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
 ),
 
 index_unioned AS (
     SELECT * FROM index_cleaned
     UNION ALL
-
-    SELECT
-        --PARSE_DATE('%Y%m%d', table_id) AS mdpfiledate,
-        source,
-        CAST(date AS TIMESTAMP) AS date,
-        partner,
-        tag_site,
-        transaction_type,
-        --'' AS site,
-        --'' AS tier,
-        ad_size_initial,
-        CASE
-            WHEN source = 'Index CAL_OB' AND ad_size = '300x250'  THEN '300x250'
-            WHEN source = 'Index CAL_OB' AND ad_size = '320x50'   THEN '320x50'
-            WHEN source = 'Index CAL_OB' AND ad_size = '728x90'   THEN '728x90'
-            WHEN source = 'Index CAL_OB' AND ad_size = '300x600'  THEN '300x600'
-            WHEN source = 'Index CAL_OB' AND ad_size = '300x1050' THEN '300x1050'
-            ELSE 'Video/Overlay'
-            END AS ad_size,
-        ad_type,
-        path_type,
-        device_type_initial,
-        device_type,
-        country_initial,
-        country,
-        dsp_initial,
-        buyer_initial,
-        advertiser_initial,
-        deal_id,
-        deal_name,
-        net_revenue,
-        gross_revenue,
-        imps,
-        NULL AS active_view_measured_impressions,
-        NULL AS active_view_viewed_impressions,
-        NULL AS bid_requests,
-        NULL AS bid_responses,
-        --'' AS filename
-    FROM index_OB_base
+    SELECT * FROM `meredith-switchboard.programmatic_all_partners.tbl_index_OB_historical`
+    ## OB_historical only runs from 1/1/2020 - 7/1/2020
 ),
 
 index_bid_prog_all_proxy AS (
@@ -225,6 +182,8 @@ index_bid_prog_all_proxy AS (
         'Index' AS partner,
         '' AS tag_site,
         'PMP' AS transaction_type,
+        '' AS site,
+        '' AS tier,
         '' AS ad_size_initial,
         '' AS ad_size,
         '' AS ad_type,

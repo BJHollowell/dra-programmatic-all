@@ -1,11 +1,10 @@
 ## view name: vw_programmatic_all_amazon_pmp
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on: 3/1/2022
+## Last modified on: 3/22/2022
 ## Last modified by: bj.hollowell@meredith.com
-## Change log: limiting fields pulled in from raw data source
-##
-##
+## Change log:  3/22/2022 Removed individual mapping within partner views so it can all be done once in prod version.
+##              Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
 ## notes:
 ##
 
@@ -22,12 +21,13 @@ amazon_pmp_base AS (
         country,
         buyer,
         deal,
-        earnings,
-        impressions,
-        qualified_requests,
-        bids_submitted
+        SUM(earnings) AS earnings,
+        SUM(impressions) AS impressions,
+        SUM(qualified_requests) AS qualified_requests,
+        SUM(bids_submitted) AS bids_submitted
     FROM `meredith-switchboard.amazon.deals_health_*`
     WHERE date >= '2020-01-01'
+    GROUP BY 1,2,3,4,5,6,7,8,9
 ),
 
 amazon_pmp_cleaned AS (
@@ -37,8 +37,8 @@ amazon_pmp_cleaned AS (
         'A9' AS partner,
         CONCAT('A9', ';', site, ';', ad_slot) AS tag_site,
         'PMP' AS transaction_type,
-        --'' AS site,
-        --'' AS tier,
+        '' AS site,
+        '' AS tier,
         size AS ad_size_initial,
         CASE
             WHEN size LIKE '300x250'      THEN '300x250'
@@ -81,15 +81,16 @@ amazon_pmp_cleaned AS (
         '' AS advertiser_initial,
         'Unknown' AS deal_id,
         deal AS deal_name,
-        earnings AS net_revenue,
-        earnings AS gross_revenue,
-        impressions AS imps,
+        SUM(earnings) AS net_revenue,
+        SUM(earnings) AS gross_revenue,
+        SUM(impressions) AS imps,
         NULL AS active_view_measured_impressions,
         NULL AS active_view_viewed_impressions,
-        qualified_requests AS bid_requests,
-        bids_submitted AS bid_responses
+        SUM(qualified_requests) AS bid_requests,
+        SUM(bids_submitted) AS bid_responses
     FROM amazon_pmp_base
     WHERE impressions <> 0
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
 )
 
 SELECT * FROM amazon_pmp_cleaned

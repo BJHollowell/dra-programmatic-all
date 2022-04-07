@@ -1,11 +1,10 @@
 ## view name: vw_programmatic_all_kargo
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on: 3/1/2022
+## Last modified on: 3/22/2022
 ## Last modified by: bj.hollowell@meredith.com
-## Change log: limiting fields pulled in from raw data source
-##
-##
+## Change log:  3/22/2022 Removed individual mapping within partner views so it can all be done once in prod version.
+##              Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
 ## notes:
 ##
 
@@ -20,10 +19,11 @@ kargo_base AS (
         dsp,
         landing_page_domain,
         deal_name,
-        revenue,
-        impressions
+        SUM(revenue) AS revenue,
+        SUM(impressions) AS impressions
     FROM `meredith-switchboard.kargo.kargo_*`
     WHERE date >= '2020-01-01'
+    GROUP BY 1,2,3,4,5,6,7
 ),
 
 kargo_cleaned AS (
@@ -33,8 +33,8 @@ kargo_cleaned AS (
         'Kargo' AS partner,
         CONCAT('Kargo', ';', property) AS tag_site,
         'Open' AS transaction_type,
-        --'' AS site,
-        --'' AS tier,
+        '' AS site,
+        'Unknown' AS tier,
         ad_slot_name AS ad_size_initial,
         CASE
             WHEN ad_slot_name LIKE '%Hover%' THEN '320x50'
@@ -58,14 +58,15 @@ kargo_cleaned AS (
         landing_page_domain AS advertiser_initial,
         '' AS deal_id,
         deal_name AS deal_name,
-        revenue AS net_revenue,
-        (revenue / 0.70) AS gross_revenue,
-        impressions AS imps,
+        SUM(revenue) AS net_revenue,
+        SUM((revenue / 0.70)) AS gross_revenue,
+        SUM(impressions) AS imps,
         NULL AS active_view_measured_impressions,
         NULL AS active_view_viewed_impressions,
         NULL AS bid_requests,
         NULL AS bid_repsonses
     FROM kargo_base
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
 )
 
 SELECT * FROM kargo_cleaned

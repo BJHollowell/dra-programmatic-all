@@ -1,11 +1,10 @@
 ## view name: vw_programmatic_all_outbrain
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on: 3/1/2022
+## Last modified on: 3/22/2022
 ## Last modified by: bj.hollowell@meredith.com
-## Change log: limiting fields pulled in from raw data source
-##
-##
+## Change log:  3/22/2022 Removed individual mapping within partner views so it can all be done once in prod version.
+##              Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
 ## notes:
 ##
 
@@ -17,10 +16,11 @@ outbrain_base AS (
         publisher,
         widget,
         platform,
-        revenue,
-        paidPvs
+        SUM(revenue) AS revenue,
+        SUM(paidPvs) AS paidPvs
     FROM `meredith-switchboard.outbrain.outbrain_*`
     WHERE day >= '2020-01-01'
+    GROUP BY 1,2,3,4
 ),
 
 outbrain_cleaned AS (
@@ -30,8 +30,8 @@ outbrain_cleaned AS (
         'Outbrain' AS partner,
         CONCAT('Outbrain', ';', publisher, ';', widget) AS tag_site,
         'Open' AS transaction_type,
-        --'' AS site,
-        --'' AS tier,
+        '' AS site,
+        'NoTier' AS tier,
         '' AS ad_size_initial,
         'Various' AS ad_size,
         'NonGam Display' AS ad_type,
@@ -49,7 +49,7 @@ outbrain_cleaned AS (
         '' AS advertiser_initial,
         '' AS deal_id,
         '' AS deal_name,
-        CASE
+        SUM(CASE
             WHEN DATE_TRUNC(day, MONTH) IN(
                 '2020-03-01',
                 '2020-04-01',
@@ -66,14 +66,15 @@ outbrain_cleaned AS (
                 '2021-10-01',
                 '2021-11-01') THEN revenue
             ELSE revenue * 1.286
-            END AS net_revenue,
-        (revenue / 0.7) AS gross_revenue,
-        paidPvs AS imps,
+            END ) AS net_revenue,
+        SUM((revenue / 0.7)) AS gross_revenue,
+        SUM(paidPvs) AS imps,
         NULL AS active_view_measured_impressions,
         NULL AS active_view_viewed_impressions,
         NULL AS bid_requests,
         NULL AS bid_responses
     FROM outbrain_base
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
 )
 
 SELECT * FROM outbrain_cleaned

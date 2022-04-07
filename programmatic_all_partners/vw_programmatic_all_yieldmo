@@ -1,22 +1,14 @@
 ## view name: vw_programmatic_all_yieldmo
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on: 3/2/2022
+## Last modified on: 3/22/2022
 ## Last modified by: bj.hollowell@meredith.com
-## Change log: limiting fields pulled in from raw data source
-##
-##
+## Change log:  3/22/2022 Removed individual mapping within partner views so it can all be done once in prod version.
+##              Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
 ## notes:
 ##
 
 WITH
-
-prog_tag_map AS (
-    SELECT
-        * EXCEPT(tag_site),
-        tag_site AS tag_site_map
-    FROM `meredith-switchboard.summary_reports.programmatic_tag_mapping`
-),
 
 yieldmo_backfill AS (
     SELECT
@@ -25,8 +17,8 @@ yieldmo_backfill AS (
         partner,
         tag_site,
         transaction_type,
-        --'' AS site,
-        --'' AS tier,
+        '' AS site,
+        '' AS tier,
         ad_size_initial,
         ad_size,
         'NonGam Display' AS ad_type,
@@ -40,24 +32,26 @@ yieldmo_backfill AS (
         advertiser_initial,
         deal_id,
         deal_name,
-        net_revenue,
-        gross_revenue,
-        imps,
-        CAST(active_view_measured_impressions AS INT64) AS active_view_measured_impressions,
-        CAST(active_view_viewed_impressions AS INT64) AS active_view_viewed_impressions,
-        CAST(bid_requests AS INT64) AS bid_requests,
+        SUM(net_revenue) AS net_revenue,
+        SUM(gross_revenue) AS gross_revenue,
+        SUM(imps) AS imps,
+        SUM(CAST(active_view_measured_impressions AS INT64)) AS active_view_measured_impressions,
+        SUM(CAST(active_view_viewed_impressions AS INT64)) AS active_view_viewed_impressions,
+        SUM(CAST(bid_requests AS INT64)) AS bid_requests,
 ## look into yieldmo backfill to see if the field is actually repsonses?
-        CAST(bid_repsonses AS INT64) AS bid_responses
+        SUM(CAST(bid_repsonses AS INT64)) AS bid_responses
     FROM `meredith-switchboard.yieldmo.yieldmo_meredith_allsites_backfill_data`
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
 ),
 
 yieldmo_base AS (
     SELECT
         Date,
         Placement_Description,
-        revenue,
-        impressions
+        SUM(revenue) AS revenue,
+        SUM(impressions) AS impressions
     FROM `meredith-switchboard.yieldmo.yieldmo_meredith_allsites_2*`
+    GROUP BY 1,2
 ),
 
 yieldmo_cleaned AS (
@@ -67,10 +61,10 @@ yieldmo_cleaned AS (
         'YieldMo' AS partner,
         CONCAT('YieldMo', ';', Placement_Description) AS tag_site,
         'Open' AS transaction_type,
-        --'' AS site,
-        --'' AS tier,
+        '' AS site,
+        '' AS tier,
         '' AS ad_size_initial,
-        '' AS ad_size,
+        'to_be_mapped' AS ad_size,
         CASE
             WHEN Placement_Description LIKE '%tier%' THEN 'Display'
             ELSE 'NonGam Display'
@@ -80,7 +74,7 @@ yieldmo_cleaned AS (
             ELSE 'Indirect'
             END AS path_type,
         '' AS device_type_initial,
-        '' AS device_type,
+        'to_be_mapped' AS device_type,
         '' AS country_initial,
         'Unknown' AS country,
         '' AS dsp_initial,
@@ -88,55 +82,21 @@ yieldmo_cleaned AS (
         '' AS advertiser_initial,
         '' AS deal_id,
         '' AS deal_name,
-        revenue AS net_revenue,
-        (revenue / 0.7) AS gross_revenue,
-        impressions AS imps,
+        SUM(revenue) AS net_revenue,
+        SUM((revenue / 0.7)) AS gross_revenue,
+        SUM(impressions) AS imps,
         NULL AS active_view_measured_impressions,
         NULL AS active_view_viewed_impressions,
         NULL AS bid_requests,
         NULL AS bid_responses
     FROM yieldmo_base
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
 ),
 
-yieldmo_mapped AS (
-    SELECT
-        A.source,
-        A.date,
-        A.partner,
-        A.tag_site,
-        A.transaction_type,
-        --A.site,
-        --A.tier,
-        A.ad_size_initial,
-        B.adsize AS ad_size,
-        A.ad_type,
-        A.path_type,
-        A.device_type_initial,
-        B.device AS device_type,
-        A.country_initial,
-        A.country,
-        A.dsp_initial,
-        A.buyer_initial,
-        A.advertiser_initial,
-        A.deal_id,
-        A.deal_name,
-        A.net_revenue,
-        A.gross_revenue,
-        A.imps,
-        A.active_view_measured_impressions,
-        A.active_view_viewed_impressions,
-        A.bid_requests,
-        A.bid_responses
-    FROM yieldmo_cleaned as A
-
-    LEFT JOIN prog_tag_map as B
-    ON A.tag_site = B.tag_site_map
-),
-
-yieldmo_final AS (
-    SELECT * FROM yieldmo_mapped
+yieldmo_unioned AS (
+    SELECT * FROM yieldmo_cleaned
     UNION ALL
     SELECT * FROM yieldmo_backfill
 )
 
-SELECT * FROM yieldmo_final
+SELECT * FROM yieldmo_unioned

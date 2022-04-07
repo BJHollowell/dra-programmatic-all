@@ -1,43 +1,38 @@
 ## view name: vw_programmatic_all_medianet
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on:
-## Last modified by:
-## Change log:
-##
-##
+## Last modified on: 3/22/2022
+## Last modified by: bj.hollowell@meredith.com
+## Change log:  3/22/2022 Removed individual mapping within partner views so it can all be done once in prod version.
+##              Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
 ## notes:
 ##
 
 WITH
 
-prog_tag_map AS (
-    SELECT
-        * EXCEPT(tag_site),
-        tag_site AS tag_site_map
-    FROM `meredith-switchboard.summary_reports.programmatic_tag_mapping`
-),
-
 medianet_channelwise_old AS (
     SELECT
         date AS date,
         channelName AS channel,
-        estimatedRevenue AS estimated_revenue,
-        impressions AS impressions,
+        SUM(estimatedRevenue) AS estimated_revenue,
+        SUM(impressions) AS impressions,
     FROM `meredith-switchboard.media_net.channelwise_*`
     WHERE date >= '2020-01-01'
+    GROUP BY 1,2
 ),
 
 medianet_channelwise_base AS (
     SELECT
         date,
         channel,
-        estimated_revenue,
-        impressions
+        SUM(estimated_revenue) AS estimated_revenue,
+        SUM(impressions) AS impressions
     FROM `meredith-switchboard.media_net.medianet_api_report_*`
     WHERE date >= '2020-01-01'
+    GROUP BY 1,2
 
     UNION ALL
+
     SELECT * FROM medianet_channelwise_old
 ),
 
@@ -48,64 +43,30 @@ medianet_channelwise_cleaned AS (
         'Media.net' AS partner,
         CONCAT('Media.net', ';', channel) AS tag_site,
         'Open' AS transaction_type,
-        --'' AS site,
-        --'' AS tier,
+        '' AS site,
+        'NoTier' AS tier,
         '' AS ad_size_initial,
-        'Various' AS ad_size,
+        'to_be_mapped' AS ad_size,
         'NonGam Display' AS ad_type,
         'Indirect' AS path_type,
         '' AS device_type_initial,
-        '' AS device_type,
+        'to_be_mapped' AS device_type,
         '' AS country_initial,
-        '' AS country,
+        'to_be_mapped' AS country,
         '' AS dsp_initial,
         '' AS buyer_initial,
         '' AS advertiser_initial,
         '' AS deal_id,
         '' AS deal_name,
-        (estimated_revenue * 0.7) AS net_revenue,
-        estimated_revenue AS gross_revenue,
-        impressions AS imps,
+        SUM((estimated_revenue * 0.7)) AS net_revenue,
+        SUM(estimated_revenue) AS gross_revenue,
+        SUM(impressions) AS imps,
         NULL AS active_view_measured_impressions,
         NULL AS active_view_viewed_impressions,
         NULL AS bid_requests,
         NULL AS bid_responses
     FROM medianet_channelwise_base
-),
-
-medianet_channelwise_mapped AS (
-    SELECT
-        source,
-        date,
-        partner,
-        tag_site,
-        transaction_type,
-        --A.site,
-        --A.tier,
-        ad_size_initial,
-        B.adsize AS ad_size,
-        ad_type,
-        path_type,
-        device_type_initial,
-        B.device AS device_type,
-        country_initial,
-        B.country AS country,
-        dsp_initial,
-        buyer_initial,
-        advertiser_initial,
-        deal_id,
-        deal_name,
-        net_revenue,
-        gross_revenue,
-        imps,
-        active_view_measured_impressions,
-        active_view_viewed_impressions,
-        bid_requests,
-        bid_responses
-    FROM medianet_channelwise_cleaned AS A
-
-    LEFT JOIN prog_tag_map AS B
-    ON A.tag_site = B.tag_site_map
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
 ),
 
 medianet_deals_base AS (
@@ -116,10 +77,11 @@ medianet_deals_base AS (
         device_name,
         country_name,
         advertiser_hostname,
-        audited_pub_revenue,
-        impressions
+        SUM(audited_pub_revenue) AS audited_pub_revenue,
+        SUM(impressions) AS impressions
     FROM `meredith-switchboard.media_net.medianet_deal_report_*`
     WHERE report_date >= '2020-01-01'
+    GROUP BY 1,2,3,4,5,6
 ),
 
 medianet_deals_cleaned AS (
@@ -129,8 +91,8 @@ medianet_deals_cleaned AS (
         'Media.net' AS partner,
         CONCAT('Media.net', ';', creative_name) AS tag_site,
         'Open' AS transaction_type,
-        --'' AS site,
-        --'' AS tier,
+        '' AS site,
+        '' AS tier,
         '' AS ad_size_initial,
         size AS ad_size,
         'Display' AS ad_type,
@@ -148,18 +110,19 @@ medianet_deals_cleaned AS (
         advertiser_hostname AS advertiser_initial,
         '' AS deal_id,
         '' AS deal_name,
-        audited_pub_revenue AS net_revenue,
-        audited_pub_revenue AS gross_revenue,
-        impressions AS imps,
+        SUM(audited_pub_revenue) AS net_revenue,
+        SUM(audited_pub_revenue) AS gross_revenue,
+        SUM(impressions) AS imps,
         NULL AS active_view_measured_impressions,
         NULL AS active_view_viewed_impressions,
         NULL AS bid_requests,
         NULL AS bid_repsonses
     FROM medianet_deals_base
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
 ),
 
 medianet_final AS (
-    SELECT * FROM  medianet_channelwise_mapped
+    SELECT * FROM  medianet_channelwise_cleaned
     UNION ALL
     SELECT * FROM medianet_deals_cleaned
 )

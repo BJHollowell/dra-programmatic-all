@@ -1,9 +1,9 @@
-## view name: vw_programmatic_all_partner_data
+## view name: vw_programmatic_all_nonAdX_partner_aggregate
 ## description: view for union of all individual programmatic partner views/data
 ## created by: BJ Hollowell bj.hollowell@meredith.com
-## Last modified on: 4/1/22
+## Last modified on: 4/6/22
 ## Last modified by: bj.hollowell@meredith.com
-## Change log: updated partner view locations out of test environment to production
+## Change log: implement new partner view for Rubicon
 ##
 ## notes:
 ##
@@ -11,7 +11,7 @@
 
 WITH
 
-programmatic_all_untagged AS(
+nonAdX_partner_union AS (
     SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_index`
 
     UNION ALL
@@ -32,7 +32,7 @@ programmatic_all_untagged AS(
 
     UNION ALL
 
-    SELECT * FROM `meredith-switchboard.programmatic_all_partners.temp_rubicon`
+    SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_rubicon`
 
     UNION ALL
 
@@ -123,4 +123,4 @@ programmatic_all_untagged AS(
     SELECT * FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_pacific`
 )
 
-SELECT * FROM programmatic_all_untagged
+SELECT * FROM nonAdX_partner_union

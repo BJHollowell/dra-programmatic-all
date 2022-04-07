@@ -1,11 +1,10 @@
 ## view name: vw_programmatic_all_roundel
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on: 2/28/2022
+## Last modified on: 3/22/2022
 ## Last modified by: bj.hollowell@meredith.com
-## Change log:  2/28/2022 BJ amended the base steps to limit fields brought in, dedupe within that step and aggregate
-##              progall was taking too long to process and it was due to steps like those. this will cut down processing
-##
+## Change log:  3/22/2022 Removed individual mapping within partner views so it can all be done once in prod version.
+##              Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
 ## notes:
 ##
 
@@ -60,8 +59,8 @@ roundel_brands_cleaned AS (
         'Roundel' AS partner,
         CONCAT('Roundel', ';', domain) AS tag_site,
         'PMP' AS transaction_Type,
-        --'' AS site,
-        --'' AS tier,
+        '' AS site,
+        'Unknown' AS tier,
         size AS ad_size_initial,
         CASE
             WHEN size LIKE '%640x360%'   THEN 'Video/Overlay'
@@ -103,14 +102,15 @@ roundel_brands_cleaned AS (
         brand_name AS advertiser_initial,
         deal_id AS deal_id,
         deal_name AS deal_name,
-        deal_net_revenue AS net_revenue,
-        (deal_net_revenue / 0.9) AS gross_revenue,
-        deal_impressions AS imps,
+        SUM(deal_net_revenue) AS net_revenue,
+        SUM((deal_net_revenue / 0.9)) AS gross_revenue,
+        SUM(deal_impressions) AS imps,
         NULL AS active_view_measured_impressions,
         NULL AS active_view_viewed_impressions,
         NULL AS bid_requests,
         NULL AS bid_responses
     FROM roundel_brands_base
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
 ),
 
 roundel_deals_base AS (
@@ -158,8 +158,8 @@ roundel_deals_cleaned AS (
         'Roundel' AS partner,
         CONCAT('Roundel', ';', domain) AS tag_site,
         'PMP' AS transaction_type,
-        --'' AS site,
-        --'' AS tier,
+        '' AS site,
+        'Unknown' AS tier,
         size AS ad_size_initial,
         CASE
             WHEN size LIKE '%640x360%'   THEN 'Video/Overlay'
@@ -206,9 +206,10 @@ roundel_deals_cleaned AS (
         NULL AS imps,
         NULL AS active_view_measured_impressions,
         NULL AS active_view_viewed_impressions,
-        bid_request AS bid_requests,
-        bid_chosen AS bid_responses
+        SUM(bid_request) AS bid_requests,
+        SUM(bid_chosen) AS bid_responses
     FROM roundel_deals_base
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
 ),
 
 roundel_combined AS (
@@ -217,57 +218,4 @@ roundel_combined AS (
     SELECT * FROM roundel_deals_cleaned
 )
 
-SELECT
-    source,
-    date,
-    partner,
-    tag_site,
-    transaction_type,
-    --site,
-    --tier,
-    ad_size_initial,
-    ad_size,
-    ad_type,
-    path_type,
-    device_type_initial,
-    device_type,
-    country_initial,
-    country,
-    dsp_initial,
-    buyer_initial,
-    advertiser_initial,
-    deal_id,
-    deal_name,
-    SUM(net_revenue) AS net_revenue,
-    SUM(gross_revenue) AS gross_revenue,
-    SUM(imps) AS imps,
-    active_view_measured_impressions,
-    active_view_viewed_impressions,
-    bid_requests,
-    bid_responses
-FROM roundel_combined
-GROUP BY
-    source,
-    date,
-    partner,
-    tag_site,
-    transaction_type,
-    --site,
-    --tier,
-    ad_size_initial,
-    ad_size,
-    ad_type,
-    path_type,
-    device_type_initial,
-    device_type,
-    country_initial,
-    country,
-    dsp_initial,
-    buyer_initial,
-    advertiser_initial,
-    deal_id,
-    deal_name,
-    active_view_measured_impressions,
-    active_view_viewed_impressions,
-    bid_requests,
-    bid_responses
+SELECT * FROM roundel_combined

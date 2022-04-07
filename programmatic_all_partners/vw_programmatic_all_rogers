@@ -1,10 +1,10 @@
 ## view name: vw_programmatic_all_rogers
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on: 3/8/2022
+## Last modified on: 3/22/2022
 ## Last modified by: bj.hollowell@meredith.com
-## Change log:  amending the dedupe logic for better efficiency and limiting the fields brought in from raw data.  Second level of dedupe was added
-##              as well due to Rogers sending double files most days going all the way back.
+## Change log:  3/22/2022 Removed individual mapping within partner views so it can all be done once in prod version.
+##              Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
 ##
 ## notes:
 ## This view has two different base, cleaned, deduped portions that get unioned into a final output.
@@ -72,8 +72,8 @@ rogers_monthly_cleaned AS (
         'Rogers' AS partner,
         CONCAT('Rogers', ';', Ad_unit_1, ';', Ad_unit_2) AS tag_site,
         'Open' AS transaction_type,
-        --'' AS site,
-        --'' AS tier,
+        '' AS site,
+        '' AS tier,
         Creative_Size2 AS ad_size_initial,
         CASE
             WHEN Creative_Size2 = '300x250'  THEN '300x250'
@@ -108,18 +108,19 @@ rogers_monthly_cleaned AS (
         '' AS advertiser_initial,
         '' AS deal_id,
         '' AS deal_name,
-        CASE
+        SUM(CASE
             WHEN Date <= '2020-03-31' THEN (Total_CPM_CPC_CPD_and_vCPM_revenue_CA_ * 0.7) * 0.7
             WHEN Date >= '2021-01-01' THEN (Total_CPM_CPC_CPD_and_vCPM_revenue_CA_ * 0.7) * 0.7
             ELSE (Total_CPM_CPC_CPD_and_vCPM_revenue_CA_ * 0.7) * 0.75
-            END AS net_revenue,
-        (Total_CPM_CPC_CPD_and_vCPM_revenue_CA_ * 0.7) AS gross_revenue,
-        Total_impressions AS imps,
+            END ) AS net_revenue,
+        SUM((Total_CPM_CPC_CPD_and_vCPM_revenue_CA_ * 0.7)) AS gross_revenue,
+        SUM(Total_impressions) AS imps,
         NULL AS active_view_measured_impressions,
         NULL AS active_view_viewed_impressions,
         NULL AS bid_requests,
         NULL AS bid_responses
     FROM rogers_monthly_base
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
 ),
 
 rogers_allrecipes_base AS (
@@ -165,8 +166,8 @@ rogers_allrecipes_cleaned AS (
         'Rogers' AS partner,
         CONCAT('Rogers', ';', Ad_unit_1, ';', Ad_unit_2) AS tag_site,
         'Open' AS transaction_type,
-        --'' AS site,
-        --'' AS tier,
+        '' AS site,
+        '' AS tier,
         Creative_size AS ad_size_initial,
         CASE
             WHEN Creative_size = '300 x 250'  THEN '300x250'
@@ -201,18 +202,19 @@ rogers_allrecipes_cleaned AS (
         '' AS advertiser_initial,
         '' AS deal_id,
         '' AS deal_name,
-        CASE
+        SUM(CASE
             WHEN Date <= '2020-03-31'       THEN (Total_CPM_CPC_CPD_and_vCPM_revenue_CA_dollars * 0.7) * 0.7
-            WHEN Date(Date) >= '2021-01-01' THEN (Total_CPM_CPC_CPD_and_vCPM_revenue_CA_dollars * 0.7) * 0.7
+            WHEN DATE(Date) >= '2021-01-01' THEN (Total_CPM_CPC_CPD_and_vCPM_revenue_CA_dollars * 0.7) * 0.7
             ELSE (Total_CPM_CPC_CPD_and_vCPM_revenue_CA_dollars * 0.7) * 0.75
-            END AS net_revenue,
-        (Total_CPM_CPC_CPD_and_vCPM_revenue_CA_dollars * 0.7) AS gross_revenue,
-        Total_impressions AS imps,
+            END ) AS net_revenue,
+        SUM((Total_CPM_CPC_CPD_and_vCPM_revenue_CA_dollars * 0.7)) AS gross_revenue,
+        SUM(Total_impressions) AS imps,
         NULL AS active_view_measured_impressions,
         NULL AS active_view_viewed_impressions,
         NULL AS bid_requests,
         NULL AS bid_responses
     FROM rogers_allrecipes_base
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
 )
 
 SELECT * FROM rogers_monthly_cleaned

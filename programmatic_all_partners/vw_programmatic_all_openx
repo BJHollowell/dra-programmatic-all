@@ -1,11 +1,10 @@
 ## view name: vw_programmatic_all_openx
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on: 3/1/2022
+## Last modified on: 3/22/2022
 ## Last modified by: bj.hollowell@meredith.com
-## Change log:  3/1/2022 BJ amended the base steps to limit fields brought in, dedupe within that step and aggregate
-##              progall was taking too long to process and it was due to steps like those. this will cut down processing
-##
+## Change log:  3/22/2022 Removed individual mapping within partner views so it can all be done once in prod version.
+##              Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
 ## notes:
 ##
 
@@ -62,14 +61,13 @@ openx_base AS (
 
 openx_cleaned AS (
     SELECT
-        table_id,
         'OpenX Email' AS source,
         CAST(day AS TIMESTAMP) AS date,
         'OpenX' AS partner,
         CONCAT('OpenX', ';', pageDomain, ';', publisherAdUnitName) AS tag_site,
         'Open' AS transaction_type,
-        --'' AS site,
-        --'' AS tier,
+        '' AS site,
+        '' AS tier,
         ad_size AS ad_size_initial,
         CASE
             WHEN ad_size LIKE '300x250'  THEN '300x250'
@@ -121,20 +119,21 @@ openx_cleaned AS (
             WHEN privateMarketplacePublisherDealName IS NOT NULL THEN privateMarketplacePublisherDealName
             ELSE 'Open'
             END AS deal_name,
-        CASE
+        SUM(CASE
             WHEN CAST(day AS DATETIME) >= '2021-09-30' THEN marketPublisherRevenueinPCoin
             ELSE (marketPublisherRevenueinPCoin / 1000000)
-            END AS net_revenue,
-        CASE
+            END ) AS net_revenue,
+        SUM(CASE
             WHEN CAST(day AS DATETIME) >= '2021-09-30' THEN (marketPublisherRevenueinPCoin / 0.85)
             ELSE ((marketPublisherRevenueinPCoin / 1000000) / 0.85)
-            END AS gross_revenue,
-        CAST(FLOOR(marketImpressions) AS INT64) AS imps,
+            END ) AS gross_revenue,
+        CAST(FLOOR(SUM(marketImpressions)) AS INT64) AS imps,
         NULL AS active_view_measured_impressions,
         NULL AS active_view_viewed_impressions,
         NULL AS bid_requests,
         NULL AS bid_repsonses
     FROM openx_base
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
 )
 
 SELECT * FROM openx_cleaned

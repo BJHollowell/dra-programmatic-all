@@ -1,11 +1,10 @@
 ## view name: vw_programmatic_all_teads
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on: 3/2/2022
+## Last modified on: 3/22/2022
 ## Last modified by: bj.hollowell@meredith.com
-## Change log: limiting fields pulled in from raw data source
-##
-##
+## Change log:  3/22/2022 Removed individual mapping within partner views so it can all be done once in prod version.
+##              Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
 ## notes:
 ##
 
@@ -24,10 +23,11 @@ teads_base AS (
         deal_id_keycode,
         transaction_type,
         connection,
-        income_converted_usd,
-        publisher_billable_volume
+        SUM(income_converted_usd) AS income_converted_usd,
+        SUM(publisher_billable_volume) AS publisher_billable_volume
     FROM `meredith-switchboard.teads.teads_api_*`
     WHERE day >= '2020-01-01'
+    GROUP BY 1,2,3,4,5,6,7,8,9,10
 ),
 
 teads_cleaned AS (
@@ -40,8 +40,8 @@ teads_cleaned AS (
             WHEN buyer_type LIKE 'office' THEN 'Open'
             ELSE 'PMP'
             END AS transaction_type,
-        --'' AS site,
-        --'' AS tier,
+        '' AS site,
+        '' AS tier,
         '' AS ad_size_initial,
         'Native' AS ad_size,
         'NonGam Outstream' AS ad_type,
@@ -71,17 +71,18 @@ teads_cleaned AS (
             WHEN transaction_type LIKE 'Open' THEN 'Open'
             ELSE connection
             END AS deal_name,
-        CASE
+        SUM(CASE
             WHEN transaction_type LIKE 'PMP' THEN income_converted_usd * 0.85
             ELSE income_converted_usd
-            END AS net_revenue,
-        income_converted_usd AS gross_revenue,
-        publisher_billable_volume AS imps,
+            END ) AS net_revenue,
+        SUM(income_converted_usd) AS gross_revenue,
+        SUM(publisher_billable_volume) AS imps,
         NULL AS active_view_measured_impressions,
         NULL AS active_view_viewed_impressions,
         NULL AS bid_requests,
         NULL AS bid_responses
     FROM teads_base
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
 )
 
 SELECT * FROM teads_cleaned

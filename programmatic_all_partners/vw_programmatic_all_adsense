@@ -1,11 +1,10 @@
 ## view name: vw_programmatic_all_adsense
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on: 3/1/2022
+## Last modified on: 3/22/2022
 ## Last modified by: bj.hollowell@meredith.com
-## Change log: limiting fields pulled in from raw data source
-##
-##
+## Change log:  3/22/2022 Removed individual mapping within partner views so it can all be done once in prod version.
+##              Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
 ## notes:
 ##
 
@@ -18,10 +17,11 @@ adsense_base AS (
         ad_unit_size_name,
         platform_type_name,
         country_name,
-        earnings,
-        individual_ad_impressions
+        SUM(earnings) AS earnings,
+        SUM(individual_ad_impressions) AS individual_ad_impressions
     FROM `meredith-switchboard.adsense.adsense_*`
     WHERE date >= '2020-01-01'
+    GROUP BY 1,2,3,4,5
 ),
 
 adsense_cleaned AS (
@@ -31,8 +31,8 @@ adsense_cleaned AS (
         'AdSense' AS partner,
         CONCAT('AdSense', ';', ad_unit_name) AS tag_site,
         'Open' AS transaction_type,
-        --'' AS site,
-        --'' AS tier,
+        '' AS site,
+        '' AS tier,
         ad_unit_size_name AS ad_size_initial,
         CASE
             WHEN ad_unit_size_name LIKE '300x250'  THEN '300x250'
@@ -65,14 +65,15 @@ adsense_cleaned AS (
         '' AS advertiser_initial,
         '' AS deal_id,
         '' AS deal_name,
-        earnings AS net_revenue,
-        (earnings / 0.675) AS gross_revenue,
-        individual_ad_impressions AS imps,
+        SUM(earnings) AS net_revenue,
+        SUM((earnings / 0.675)) AS gross_revenue,
+        SUM(individual_ad_impressions) AS imps,
         NULL AS active_view_measured_impressions,
         NULL AS active_view_viewed_impressions,
         NULL AS bid_requests,
         NULL AS bid_responses
     FROM adsense_base
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
 )
 
 SELECT * FROM adsense_cleaned

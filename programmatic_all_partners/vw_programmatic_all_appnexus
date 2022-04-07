@@ -1,22 +1,14 @@
 ## view name: vw_programmatic_all_appnexus
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on: 3/1/2022
+## Last modified on: 3/22/2022
 ## Last modified by: bj.hollowell@meredith.com
-## Change log: limiting fields pulled in from raw data source
-##
-##
+## Change log:  3/22/2022 Removed individual mapping within partner views so it can all be done once in prod version.
+##              Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
 ## notes:
 ##
 
 WITH
-
-prog_tag_map AS (
-    SELECT
-        * EXCEPT(tag_site),
-        tag_site AS tag_site_map
-    FROM `meredith-switchboard.summary_reports.programmatic_tag_mapping`
-),
 
 appnexus_base AS (
     SELECT
@@ -31,12 +23,13 @@ appnexus_base AS (
         buyer_member_name,
         brand_name,
         deal_id,
-        revenue,
-        imps,
-        view_measured_imps,
-        imps_viewed
+        SUM(revenue) AS revenue,
+        SUM(imps) AS imps,
+        SUM(view_measured_imps) AS view_measured_imps,
+        SUM(imps_viewed) AS imps_viewed
     FROM `meredith-switchboard.appnexus.seller_brand_review_*`
     WHERE day >= '2020-01-01'
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11
 ),
 
 appnexus_cleaned AS (
@@ -49,8 +42,8 @@ appnexus_cleaned AS (
             WHEN deal_name = '--' THEN 'Open'
             ELSE 'PMP'
             END AS transaction_type,
-        --'' AS site,
-        --'' AS tier,
+        '' AS site,
+        '' AS tier,
         size AS ad_size_initial,
         CASE
             WHEN size = '300x250'  THEN '300x250'
@@ -75,7 +68,7 @@ appnexus_cleaned AS (
             ELSE 'HB'
             END AS path_type,
         '' AS device_type_initial,
-        '' AS device_type,
+        'to_be_mapped' AS device_type,
         geo_country_name AS country_initial,
         CASE
             WHEN geo_country_name = 'United States' THEN 'USA'
@@ -85,51 +78,17 @@ appnexus_cleaned AS (
         bidder_name AS dsp_initial,
         buyer_member_name AS buyer_initial,
         brand_name AS advertiser_initial,
-        deal_id AS deal_id,
+        CAST(deal_id AS STRING) AS deal_id,
         deal_name AS deal_name,
-        revenue AS net_revenue,
-        (revenue / 0.85) AS gross_revenue,
-        imps AS imps,
-        view_measured_imps AS active_view_measured_impressions,
-        imps_viewed AS active_view_viewed_impressions,
+        SUM(revenue) AS net_revenue,
+        SUM((revenue / 0.85)) AS gross_revenue,
+        SUM(imps) AS imps,
+        SUM(view_measured_imps) AS active_view_measured_impressions,
+        SUM(imps_viewed) AS active_view_viewed_impressions,
         NULL AS bid_requests,
         NULL AS bid_responses
     FROM appnexus_base
-),
-
-appnexus_mapped AS (
-    SELECT
-        A.source,
-        A.date,
-        A.partner,
-        A.tag_site,
-        A.transaction_type,
-        --A.site,
-        --A.tier,
-        A.ad_size_initial,
-        A.ad_size,
-        A.ad_type,
-        A.path_type,
-        A.device_type_initial,
-        B.device AS device_type,
-        A.country_initial,
-        A.country,
-        A.dsp_initial,
-        A.buyer_initial,
-        A.advertiser_initial,
-        CAST(A.deal_id AS STRING) AS deal_id,
-        A.deal_name,
-        A.net_revenue,
-        A.gross_revenue,
-        A.imps,
-        A.active_view_measured_impressions,
-        A.active_view_viewed_impressions,
-        A.bid_requests,
-        A.bid_responses
-    FROM appnexus_cleaned AS A
-
-    LEFT JOIN prog_tag_map AS B
-    ON A.tag_site = B.tag_site_map
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
 )
 
-SELECT * FROM appnexus_mapped
+SELECT * FROM appnexus_cleaned

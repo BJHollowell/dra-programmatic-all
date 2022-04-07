@@ -1,29 +1,35 @@
 ## view name: vw_programmatic_all_rubicon
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on:
-## Last modified by:
-## Change log:
-##
+## Last modified on: 4/6/2022
+## Last modified by: bj.hollowell@meredith.com
+## Change log:  Created tbl_rubicon_historical to account for missing/bad 2020 data that can no longer be accessed by Rubicon API.
+##              Using the current prog_all 2020 data and raw data from 2021 onward
 ##
 ## notes:
 ##
 
 WITH
 
-prog_tag_map AS (
-    SELECT
-        * EXCEPT(tag_site),
-        tag_site AS tag_site_map
-    FROM `meredith-switchboard.summary_reports.programmatic_tag_mapping`
-),
-
 rubicon_base AS (
     SELECT
-        *,
-        _table_suffix AS table_id
+        date,
+        site,
+        zone,
+        deal,
+        size,
+        ad_server_api_code,
+        country,
+        partner,
+        buyer,
+        advertiser,
+        deal_id,
+        SUM(revenue) AS revenue,
+        SUM(paid_impressions) AS paid_impressions
+        --_table_suffix AS table_id
     FROM `meredith-switchboard.rubicon.rubicon_summary_v2_*`
-    WHERE date >= '2020-01-01'
+    WHERE date >= '2021-01-01' AND paid_impressions <> 0
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11
 ),
 
 rubicon_cleaned AS (
@@ -37,8 +43,8 @@ rubicon_cleaned AS (
             WHEN deal = 'Open Market'     THEN 'Open'
             ELSE 'PMP'
             END AS transaction_type,
-        --'' AS site,
-        --'' AS tier,
+        '' AS site,
+        '' AS tier,
         size AS ad_size_initial,
         CASE
             WHEN size LIKE '%Video%'   THEN 'Video'
@@ -69,7 +75,7 @@ rubicon_cleaned AS (
             ELSE 'Tag in adserver'
             END AS path_type,
         '' AS device_type_initial,
-        '' AS device_type,
+        'to_be_mapped' AS device_type,
         country AS country_initial,
         CASE
             WHEN country = 'United States' THEN 'USA'
@@ -81,52 +87,57 @@ rubicon_cleaned AS (
         advertiser AS advertiser_initial,
         deal_id AS deal_id,
         deal AS deal_name,
-        CASE
+        SUM(CASE
             WHEN site LIKE '%Guaranteed%' THEN (revenue * 0.97)
             ELSE (revenue * 0.85)
-            END AS net_revenue,
-        revenue AS gross_revenue,
-        paid_impressions AS imps,
+            END ) AS net_revenue,
+        SUM(revenue) AS gross_revenue,
+        SUM(paid_impressions) AS imps,
         NULL AS active_view_measured_impressions,
         NULL AS active_view_viewed_impressions,
         NULL AS bid_requests,
         NULL AS bid_responses
     FROM rubicon_base
-    WHERE paid_impressions <> 0
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
 ),
 
-rubicon_mapped AS (
+rubicon_historical AS (
     SELECT
-        A.source,
-        A.date,
-        A.partner,
-        A.tag_site,
-        A.transaction_type,
-        --A.site,
-        --A.tier,
-        A.ad_size_initial,
-        A.ad_size,
-        A.ad_type,
-        A.path_type,
-        A.device_type_initial,
-        B.Device AS device_type,
-        A.country_initial,
-        A.country,
-        A.dsp_initial,
-        A.buyer_initial,
-        A.advertiser_initial,
-        A.deal_id,
-        A.deal_name,
-        A.net_revenue,
-        A.gross_revenue,
-        A.imps,
-        A.active_view_measured_impressions,
-        A.active_view_viewed_impressions,
-        A.bid_requests,
-        A.bid_responses
-    FROM rubicon_cleaned AS A
-    LEFT JOIN  prog_tag_map AS B
-    ON A.tag_site = B.tag_site_map
+        source,
+        date,
+        'Magnite' AS partner,
+        tag_site,
+        transaction_type,
+        '' AS site,
+        '' AS tier,
+        ad_size_initial,
+        ad_size,
+        ad_type,
+        path_type,
+        device_type_initial,
+        'to_be_mapped' AS device_type,
+        country_initial,
+        country,
+        dsp_initial,
+        buyer_initial,
+        advertiser_initial,
+        deal_Id,
+        deal_Name,
+        net_revenue,
+        gross_revenue,
+        imps,
+        active_view_measured_impressions,
+        active_view_viewed_impressions,
+        bid_requests,
+        bid_responses
+    FROM `meredith-switchboard.programmatic_all_partners.tbl_rubicon_historical`
+    WHERE date BETWEEN '2020-01-01' AND '2020-12-31'
+),
+
+rubicon_unioned AS (
+    SELECT * FROM rubicon_cleaned
+    UNION ALL
+    SELECT * FROM rubicon_historical
 )
 
-SELECT * FROM rubicon_mapped
+SELECT * FROM rubicon_unioned

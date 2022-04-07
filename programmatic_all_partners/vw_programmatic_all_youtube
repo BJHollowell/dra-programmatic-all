@@ -1,11 +1,10 @@
 ## view name: vw_programmatic_all_youtube
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on: 3/2/2022
+## Last modified on: 3/22/2022
 ## Last modified by: bj.hollowell@meredith.com
-## Change log: limiting fields pulled in from raw data source
-##
-##
+## Change log:  3/22/2022 Removed individual mapping within partner views so it can all be done once in prod version.
+##              Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
 ## notes:
 ##
 
@@ -15,8 +14,6 @@ youtube_base AS (
     SELECT
         A.date,
         A.country_code,
-        A.estimated_partner_revenue,
-        A.ad_impressions,
         CASE
             WHEN date BETWEEN '2020-01-01' AND '2020-10-08' AND A.channel_id = 'UC5SJjoYO0cKJmx37WGT8amg' THEN 'Emeril Lagasse'
             WHEN date BETWEEN '2020-01-01' AND '2020-10-08' AND A.channel_id = 'UCSU_obGvO2IOIh_DedvI2nA' THEN 'FanSided'
@@ -24,24 +21,28 @@ youtube_base AS (
             WHEN date BETWEEN '2020-01-01' AND '2020-10-08' AND A.channel_id = 'UCPAt6z5uX_c5Eo_cSNROzYw' THEN 'Sports Illustrated'
             WHEN date BETWEEN '2020-01-01' AND '2020-10-08' AND A.channel_id = 'UCW7ck0jRwnXqmShjGdsaoPA' THEN 'Sports Illustrated Swimsuit'
             ELSE B.title
-            END AS channel_title
+            END AS channel_title,
+        SUM(A.estimated_partner_revenue) AS estimated_partner_revenue,
+        SUM(A.ad_impressions) AS ad_impressions
     FROM `meredith-switchboard.youtube.raw_estimated_revenue_o_and_o_*` A
     LEFT JOIN `meredith-switchboard.youtube.channels_o_and_o` B
     ON A.channel_id = B.channel_id
     WHERE date >= '2020-01-01'
+    GROUP BY 1,2,3
 
     UNION ALL
 
     SELECT
         A.date,
         A.country_code,
-        A.estimated_partner_revenue,
-        A.ad_impressions,
-        B.title AS channel_title
+        B.title AS channel_title,
+        SUM(A.estimated_partner_revenue) AS estimated_partner_revenue,
+        SUM(A.ad_impressions) AS ad_impressions
     FROM `meredith-switchboard.youtube.raw_estimated_revenue_partners_*` A
     LEFT JOIN `meredith-switchboard.youtube.channels_partners` B
     ON A.channel_id = B.channel_id
     WHERE date >= '2020-01-01'
+    GROUP BY 1,2,3
 ),
 
 youtube_cleaned AS (
@@ -51,8 +52,8 @@ youtube_cleaned AS (
         'YouTube' AS partner,
         CONCAT('YouTube', ';', channel_title) AS tag_site,
         'Open' AS transaction_type,
-        --'' AS site,
-        --'' AS tier,
+        '' AS site,
+        'NoTier' AS tier,
         '' AS ad_size_initial,
         'Video/Overlay' AS ad_size,
         'Video' AS ad_type,
@@ -69,19 +70,20 @@ youtube_cleaned AS (
         '' advertiser_initial,
         '' deal_id,
         '' deal_name,
-        estimated_partner_revenue AS net_revenue,
-        (estimated_partner_revenue / 0.55) AS gross_revenue,
-        ad_impressions AS imps,
+        SUM(estimated_partner_revenue) AS net_revenue,
+        SUM((estimated_partner_revenue / 0.55)) AS gross_revenue,
+        SUM(ad_impressions) AS imps,
         NULL AS active_view_measured_impressions,
         NULL AS active_view_viewed_impressions,
         NULL AS bid_requests,
         NULL AS bid_responses
     FROM youtube_base
+    WHERE channel_title IS NOT NULL
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
 )
 
 SELECT *
 FROM youtube_cleaned
-WHERE tag_site IS NOT NULL
 
 /*
 ## channels_o_and_o map values as of 2/9/2022

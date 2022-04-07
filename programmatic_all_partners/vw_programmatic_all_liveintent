@@ -1,22 +1,14 @@
 ## view name: vw_programmatic_all_liveintent
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on: 3/1/2022
+## Last modified on: 3/22/2022
 ## Last modified by: bj.hollowell@meredith.com
-## Change log: limiting fields pulled in from raw data source
-##
-##
+## Change log:  3/22/2022 Removed individual mapping within partner views so it can all be done once in prod version.
+##              Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
 ## notes:
 ##
 
 WITH
-
-prog_tag_map AS (
-    SELECT
-        * EXCEPT(tag_site),
-        tag_site AS tag_site_map
-    FROM `meredith-switchboard.summary_reports.programmatic_tag_mapping`
-),
 
 liveintent_base AS (
     SELECT
@@ -24,11 +16,16 @@ liveintent_base AS (
         Publisher,
         Section,
         Advertiser_Domain,
-        Publisher_Revenue,
-        Impressions,
-        Demand_Type
+        Demand_Type,
+        SUM(Publisher_Revenue) AS Publisher_Revenue,
+        SUM(Impressions) AS Impressions
     FROM `meredith-switchboard.liveintent.liveintent_2*`
-    WHERE timestamp >= '2020-01-01'
+    WHERE
+        timestamp >= '2020-01-01' AND
+        Publisher NOT LIKE '%(Shop)%' AND
+        Demand_Type <> 'house' AND
+        Demand_Type <> 'direct'
+    GROUP BY 1,2,3,4,5
 ),
 
 liveintent_cleaned AS (
@@ -38,10 +35,10 @@ liveintent_cleaned AS (
         'LiveIntent' AS partner,
         CONCAT('LiveIntent', ';', Publisher, ';', Section) AS tag_site,
         'Open' AS transaction_type,
-        --'' AS site,
-        --'' AS tier,
+        '' AS site,
+        'NoTier' AS tier,
         '' AS ad_size_initial,
-        '' AS ad_size,
+        'to_be_mapped' AS ad_size,
         'Email' AS ad_type,
         'Email tag' AS path_type,
         '' AS device_type_initial,
@@ -53,56 +50,18 @@ liveintent_cleaned AS (
         Advertiser_Domain AS advertiser_initial,
         '' AS deal_id,
         '' AS deal_name,
-        Publisher_Revenue AS net_revenue,
-        CASE
+        SUM(Publisher_Revenue) AS net_revenue,
+        SUM(CASE
             WHEN timestamp <= '2020-10-19' THEN (Publisher_Revenue / 0.80)
             ELSE (Publisher_Revenue / 0.825)
-            END AS gross_revenue,
-        Impressions AS imps,
+            END ) AS gross_revenue,
+        SUM(Impressions) AS imps,
         NULL AS active_view_measured_impressions,
         NULL AS active_view_viewed_impressions,
         NULL AS bid_requests,
         NULL AS bid_responses
     FROM liveintent_base
-    WHERE
-        Publisher NOT LIKE '%(Shop)%'
-        AND Demand_Type <> 'house'
-        AND Demand_Type <> 'direct'
-),
-
-liveintent_mapped AS (
-    SELECT
-        A.source,
-        A.date,
-        A.partner,
-        A.tag_site,
-        A.transaction_type,
-        --A.site,
-        --A.tier,
-        A.ad_size_initial,
-        B.adsize AS ad_size,
-        A.ad_type,
-        A.path_type,
-        A.device_type_initial,
-        A.device_type,
-        A.country_initial,
-        A.country,
-        A.dsp_initial,
-        A.buyer_initial,
-        A.advertiser_initial,
-        A.deal_id,
-        A.deal_name,
-        A.net_revenue,
-        A.gross_revenue,
-        A.imps,
-        A.active_view_measured_impressions,
-        A.active_view_viewed_impressions,
-        A.bid_requests,
-        A.bid_responses
-    FROM liveintent_cleaned AS A
-
-    LEFT JOIN prog_tag_map AS B
-    ON A.tag_site = B.tag_site_map
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
 )
 
-SELECT * FROM liveintent_mapped
+SELECT * FROM liveintent_cleaned

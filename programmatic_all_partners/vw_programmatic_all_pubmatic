@@ -1,22 +1,14 @@
 ## view name: vw_programmatic_all_pubmatic
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on: 3/1/2022
+## Last modified on: 3/22/2022
 ## Last modified by: bj.hollowell@meredith.com
-## Change log: limiting fields pulled in from raw data source
-##
-##
+## Change log:  3/22/2022 Removed individual mapping within partner views so it can all be done once in prod version.
+##              Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
 ## notes:
 ##
 
 WITH
-
-prog_tag_map AS (
-    SELECT
-        * EXCEPT(tag_site),
-        tag_site AS tag_site_map
-    FROM `meredith-switchboard.summary_reports.programmatic_tag_mapping`
-),
 
 pubmatic_base AS (
     SELECT
@@ -26,10 +18,11 @@ pubmatic_base AS (
         dsp_id,
         buyer,
         advertiserId_name,
-        revenue,
-        paid_impressions
+        SUM(revenue) AS revenue,
+        SUM(paid_impressions) AS paid_impressions
     FROM `meredith-switchboard.pubmatic.pubmatic_158139_01_*`
     WHERE date >= '2020-01-01'
+    GROUP BY 1,2,3,4,5,6
 
     UNION ALL
 
@@ -40,10 +33,11 @@ pubmatic_base AS (
         dsp_id,
         buyer,
         advertiserId_name,
-        revenue,
-        paid_impressions
+        SUM(revenue) AS revenue,
+        SUM(paid_impressions) AS paid_impressions
     FROM `meredith-switchboard.pubmatic.pubmatic_01_us_*`
     WHERE date >= '2020-01-01'
+    GROUP BY 1,2,3,4,5,6
 
     UNION ALL
 
@@ -54,10 +48,11 @@ pubmatic_base AS (
         dsp_id,
         buyer,
         advertiserId_name,
-        revenue,
-        paid_impressions
+        SUM(revenue) AS revenue,
+        SUM(paid_impressions) AS paid_impressions
     FROM `meredith-switchboard.pubmatic.pubmatic_01_emea_*`
     WHERE date >= '2020-01-01'
+    GROUP BY 1,2,3,4,5,6
 
     UNION ALL
 
@@ -68,10 +63,11 @@ pubmatic_base AS (
         dsp_id,
         buyer,
         advertiserId_name,
-        revenue,
-        paid_impressions
+        SUM(revenue) AS revenue,
+        SUM(paid_impressions) AS paid_impressions
     FROM `meredith-switchboard.pubmatic.pubmatic_01_int_1_*`
     WHERE date >= '2020-01-01'
+    GROUP BY 1,2,3,4,5,6
 
     UNION ALL
 
@@ -82,10 +78,11 @@ pubmatic_base AS (
         dsp_id,
         buyer,
         advertiserId_name,
-        revenue,
-        paid_impressions
+        SUM(revenue) AS revenue,
+        SUM(paid_impressions) AS paid_impressions
     FROM `meredith-switchboard.pubmatic.pubmatic_01_int_2_*`
     WHERE date >= '2020-01-01'
+    GROUP BY 1,2,3,4,5,6
 
     UNION ALL
 
@@ -96,10 +93,11 @@ pubmatic_base AS (
         dsp_id,
         buyer,
         advertiserId_name,
-        revenue,
-        paid_impressions
+        SUM(revenue) AS revenue,
+        SUM(paid_impressions) AS paid_impressions
     FROM `meredith-switchboard.pubmatic.pubmatic_01_int_3_*`
     WHERE date >= '2020-01-01'
+    GROUP BY 1,2,3,4,5,6
 
     UNION ALL
 
@@ -110,10 +108,11 @@ pubmatic_base AS (
         dsp_id,
         buyer,
         advertiserId_name,
-        revenue,
-        paid_impressions
+        SUM(revenue) AS revenue,
+        SUM(paid_impressions) AS paid_impressions
     FROM `meredith-switchboard.pubmatic.pubmatic_01_int_4_*`
     WHERE date >= '2020-01-01'
+    GROUP BY 1,2,3,4,5,6
 ),
 
 pubmatic_cleaned AS (
@@ -123,10 +122,10 @@ pubmatic_cleaned AS (
         'Pubmatic' AS partner,
         CONCAT('Pubmatic', ';', adTagId_name) AS tag_site,
         'Open' AS transaction_type,
-        --'' AS site,
-        --'' AS tier,
+        '' AS site,
+        '' AS tier,
         '' AS ad_size_initial,
-        '' AS ad_size,
+        'to_be_mapped' AS ad_size,
         CASE
             WHEN adTagId_name LIKE '%preroll%'       THEN 'Video'
             WHEN adTagId_name LIKE '%Preroll%'       THEN 'Video'
@@ -140,7 +139,7 @@ pubmatic_cleaned AS (
             ELSE 'HB'
             END AS path_type,
         '' AS device_type_initial,
-        '' AS device_type,
+        'to_be_mapped' AS device_type,
         countryId_name AS country_initial,
         CASE
             WHEN countryId_name = 'United States' THEN 'USA'
@@ -151,48 +150,15 @@ pubmatic_cleaned AS (
         advertiserId_name AS advertiser_initial,
         'Open' AS deal_id,
         'Open' AS deal_name,
-        (revenue * 0.82) AS net_revenue,
-        revenue AS gross_revenue,
-        paid_impressions AS imps,
+        SUM((revenue * 0.82)) AS net_revenue,
+        SUM(revenue) AS gross_revenue,
+        SUM(paid_impressions) AS imps,
         NULL AS active_view_measured_impressions,
         NULL AS active_view_viewed_impressions,
         NULL AS bid_requests,
         NULL AS bid_responses
     FROM pubmatic_base
-),
-
-pubmatic_mapped AS (
-    SELECT
-        A.source,
-        A.date,
-        A.partner,
-        A.tag_site,
-        A.transaction_type,
-        --A.site,
-        --A.tier,
-        A.ad_size_initial,
-        B.adsize AS ad_size,
-        A.ad_type,
-        A.path_type,
-        A.device_type_initial,
-        B.Device AS device_type,
-        A.country_initial,
-        A.country,
-        A.dsp_initial,
-        A.buyer_initial,
-        A.advertiser_initial,
-        A.deal_id,
-        A.deal_name,
-        A.net_revenue,
-        A.gross_revenue,
-        A.imps,
-        A.active_view_measured_impressions,
-        A.active_view_viewed_impressions,
-        A.bid_requests,
-        A.bid_responses
-    FROM  pubmatic_cleaned AS A
-    LEFT JOIN prog_tag_map AS B
-    ON A.tag_site = B.tag_site_map
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
 )
 
-SELECT * FROM pubmatic_mapped
+SELECT * FROM pubmatic_cleaned

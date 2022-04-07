@@ -1,22 +1,14 @@
 ## view name: vw_programmatic_all_jeeng
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on: 3/1/2022
+## Last modified on: 3/22/2022
 ## Last modified by: bj.hollowell@meredith.com
-## Change log:  3/1/2022 BJ amended the base steps to limit fields brought in, dedupe within that step and aggregate
-##              progall was taking too long to process and it was due to steps like those. this will cut down processing
-##
+## Change log:  3/22/2022 Removed individual mapping within partner views so it can all be done once in prod version.
+##              Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
 ## notes:
 ##
 
 WITH
-
-prog_tag_map AS (
-    SELECT
-        * EXCEPT(tag_site),
-        tag_site AS tag_site_map
-    FROM `meredith-switchboard.summary_reports.programmatic_tag_mapping`
-),
 
 jeeng_base AS (
     SELECT
@@ -53,8 +45,8 @@ jeeng_cleaned AS (
         'Jeeng' AS partner,                 ## formerly PowerInbox
         'Jeeng' AS tag_site,
         'Open' AS transaction_type,
-        --'Unallocated' AS site,
-        --'No Tier' AS tier,
+        'Unallocated' AS site,
+        'NoTier' AS tier,
         '' AS ad_size_initial,
         'Unknown' AS ad_size,
         'NonGam Display' AS ad_type,
@@ -68,14 +60,15 @@ jeeng_cleaned AS (
         advertiser as advertiser_initial,
         '' AS deal_id,
         '' AS deal_name,
-        revenue AS net_revenue,
-        (revenue / 0.7) AS gross_revenue,
-        impressions AS imps,
+        SUM(revenue) AS net_revenue,
+        SUM((revenue / 0.7)) AS gross_revenue,
+        SUM(impressions) AS imps,
         NULL AS active_view_measured_impressions,
         NULL AS active_view_viewed_impressions,
         NULL AS bid_requests,
         NULL AS bid_responses
     FROM jeeng_base
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
 )
 
 SELECT * FROM jeeng_cleaned
