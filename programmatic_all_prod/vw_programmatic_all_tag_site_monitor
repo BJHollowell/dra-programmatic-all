@@ -201,7 +201,7 @@ WITH
     SUM(Net_Revenue) AS Net_Revenue,
     --MIN(Date) AS min_date,
     --MAX(Date) AS max_date
-  FROM `meredith-switchboard.programmatic_all.vw_rubicon_programmatic_all`
+  FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_rubicon`
   GROUP BY
     Date,
     Source,
