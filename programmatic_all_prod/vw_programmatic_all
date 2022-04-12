@@ -1,10 +1,10 @@
 ## view name: vw_programmatic_all
 ## description: production view for all programmatic partner views summary
 ## created by: BJ Hollowell bj.hollowell@meredith.com
-## Last modified on: 4/1/2022
+## Last modified on: 4/12/2022
 ## Last modified by: bj.hollowell@meredith.com
-## Change log: added 'Other - Not Enough Spend' advertiser category logic for advs generating unher $1k in revenue.
-##             implemented view to union all non-AdX partner data and save temp table to run prog_all
+## Change log: vertical_helper updated to category_map
+##
 ##
 ## notes:
 ##
@@ -310,21 +310,21 @@ advertiser_cleanup AS (
     ON A.Advertiser = B.Advertiser
 ),
 
-Vertical_mapping_table AS (
+category_mapping_table AS (
     SELECT
         top_parent_account,
-        parent_account_revised_industry
-    FROM `meredith-switchboard.digital_ads_maps.meredith_vertical_helper`
+        DDM_parent_category
+    FROM `meredith-switchboard.digital_ads_maps.ddm_category_map`
     GROUP BY 1,2
 ),
 
 programmatic_all_mapped AS (
     SELECT
         A.*,
-        B.parent_account_revised_industry AS vertical
+        B.DDM_parent_category AS vertical
     FROM advertiser_cleanup AS A
 
-    LEFT JOIN Vertical_mapping_table AS B
+    LEFT JOIN category_mapping_table AS B
     ON A.advertiser = B.top_parent_account
 ),
 
