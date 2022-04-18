@@ -173,7 +173,6 @@ amazon_open_cleaned AS (
         AND bidder_name NOT LIKE '%Aarki%'
         AND bidder_name NOT LIKE '%Beachfront%'
         AND bidder_name NOT LIKE '%Undertone%'
-        AND bidder_name NOT LIKE '%Sovrn%'
         AND bidder_name NOT LIKE '%MobileFuse%'
         AND bidder_name NOT LIKE '%The Media Grid%'
         AND bidder_name NOT LIKE '%Amobee DSP%'
