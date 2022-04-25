@@ -1,693 +1,91 @@
 WITH A AS (
-WITH
-  AdX_programmatic_all_untagged AS(
-  SELECT
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial,
-    SUM(Net_Revenue) AS Net_Revenue,
-    --MIN(Date) AS min_date,
-    --MAX(Date) AS max_date
-  FROM `meredith-switchboard.programmatic_all.vw_AdX_programmatic_all`
-  GROUP BY
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Advertiser_initial,
-    Country_initial
+  WITH
+    AdX_programmatic_all AS (
+      SELECT
+        Date,
+        Source,
+        Tag_Site,
+        Ad_Size_initial,
+        Device_type_initial,
+        Country_initial,
+        SUM(Net_Revenue) AS Net_Revenue,
+        --MIN(Date) AS min_date,
+        --MAX(Date) AS max_date
+      FROM `meredith-switchboard.programmatic_all.vw_AdX_programmatic_all`
+      GROUP BY 1,2,3,4,5,6
 
-  UNION ALL
+      UNION ALL
 
-  SELECT
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial,
-    SUM(Net_Revenue) AS Net_Revenue,
-    --MIN(Date) AS min_date,
-    --MAX(Date) AS max_date
-  FROM `meredith-switchboard.programmatic_all.vw_AdX_API_programmatic_all`
-  GROUP BY
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial
+      SELECT
+        Date,
+        Source,
+        Tag_Site,
+        Ad_Size_initial,
+        Device_type_initial,
+        Country_initial,
+        SUM(Net_Revenue) AS Net_Revenue,
+        --MIN(Date) AS min_date,
+        --MAX(Date) AS max_date
+      FROM `meredith-switchboard.programmatic_all.vw_AdX_API_programmatic_all`
+      GROUP BY 1,2,3,4,5,6
 
-  UNION ALL
+      UNION ALL
 
-  SELECT
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial,
-    SUM(Net_Revenue) AS Net_Revenue,
-    --MIN(Date) AS min_date,
-    --MAX(Date) AS max_date
-  FROM `meredith-switchboard.programmatic_all.vw_AdX_GAM_programmatic_all`
-  GROUP BY
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial
+      SELECT
+        Date,
+        Source,
+        Tag_Site,
+        Ad_Size_initial,
+        Device_type_initial,
+        Country_initial,
+        SUM(Net_Revenue) AS Net_Revenue,
+        --MIN(Date) AS min_date,
+        --MAX(Date) AS max_date
+      FROM `meredith-switchboard.programmatic_all.vw_AdX_GAM_programmatic_all`
+      GROUP BY 1,2,3,4,5,6
 
-  UNION ALL
+      UNION ALL
 
-  SELECT
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial,
-    SUM(Net_Revenue) AS Net_Revenue,
-    --MIN(Date) AS min_date,
-    --MAX(Date) AS max_date
-  FROM `meredith-switchboard.programmatic_all.vw_AdX_API_PG_and_PD_programmatic_all`
-  GROUP BY
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial
+      SELECT
+        Date,
+        Source,
+        Tag_Site,
+        Ad_Size_initial,
+        Device_type_initial,
+        Country_initial,
+        SUM(Net_Revenue) AS Net_Revenue,
+        --MIN(Date) AS min_date,
+        --MAX(Date) AS max_date
+      FROM `meredith-switchboard.programmatic_all.vw_AdX_API_PG_and_PD_programmatic_all`
+      GROUP BY 1,2,3,4,5,6
   ),
 
-  programmatic_all_untagged AS(
-  SELECT
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial,
-    SUM(Net_Revenue) AS Net_Revenue,
-    --MIN(Date) AS min_date,
-    --MAX(Date) AS max_date
-  FROM `meredith-switchboard.programmatic_all.vw_Index_programmatic_all`
-  GROUP BY
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial
-
-  UNION ALL
-
-  SELECT
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial,
-    SUM(Net_Revenue) AS Net_Revenue,
-    --MIN(Date) AS min_date,
-    --MAX(Date) AS max_date
-  FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_trustx`
-  GROUP BY
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial
-
-  UNION ALL
-
-  SELECT
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial,
-    SUM(Net_Revenue) AS Net_Revenue,
-    --MIN(Date) AS min_date,
-    --MAX(Date) AS max_date
-  FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_teads`
-  GROUP BY
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial
-
-  UNION ALL
-
-  SELECT
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial,
-    SUM(Net_Revenue) AS Net_Revenue,
-    --MIN(Date) AS min_date,
-    --MAX(Date) AS max_date
-  FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_amazon_open`
-  GROUP BY
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial
-
-  UNION ALL
-
-  SELECT
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial,
-    SUM(Net_Revenue) AS Net_Revenue,
-    --MIN(Date) AS min_date,
-    --MAX(Date) AS max_date
-  FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_amazon_pmp`
-  GROUP BY
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial
-
-  UNION ALL
-
-  SELECT
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial,
-    SUM(Net_Revenue) AS Net_Revenue,
-    --MIN(Date) AS min_date,
-    --MAX(Date) AS max_date
-  FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_rubicon`
-  GROUP BY
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial
-
-  UNION ALL
-
-  SELECT
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial,
-    SUM(Net_Revenue) AS Net_Revenue,
-    --MIN(Date) AS min_date,
-    --MAX(Date) AS max_date
-  FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_roundel`
-  GROUP BY
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial
-
-  UNION ALL
-
-  SELECT
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial,
-    SUM(Net_Revenue) AS Net_Revenue,
-    --MIN(Date) AS min_date,
-    --MAX(Date) AS max_date
-  FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_openx`
-  GROUP BY
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial
-
-  UNION ALL
-
-  SELECT
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial,
-    SUM(Net_Revenue) AS Net_Revenue,
-    --MIN(Date) AS min_date,
-    --MAX(Date) AS max_date
-  FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_pubmatic`
-  GROUP BY
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial
-
-  UNION ALL
-
-  SELECT
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial,
-    SUM(Net_Revenue) AS Net_Revenue,
-    --MIN(Date) AS min_date,
-    --MAX(Date) AS max_date
-  FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_spotx`
-  GROUP BY
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial
-
-  UNION ALL
-
-  SELECT
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial,
-    SUM(Net_Revenue) AS Net_Revenue,
-    --MIN(Date) AS min_date,
-    --MAX(Date) AS max_date
-  FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_appnexus`
-  GROUP BY
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial
-
-  UNION ALL
-
-  SELECT
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial,
-    SUM(Net_Revenue) AS Net_Revenue,
-    --MIN(Date) AS min_date,
-    --MAX(Date) AS max_date
-  FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_medianet`
-  GROUP BY
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial
-
-  UNION ALL
-
-  SELECT
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial,
-    SUM(Net_Revenue) AS Net_Revenue,
-    --MIN(Date) AS min_date,
-    --MAX(Date) AS max_date
-  FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_rogers`
-  GROUP BY
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial
-
-  UNION ALL
-
-  SELECT
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial,
-    SUM(Net_Revenue) AS Net_Revenue,
-    --MIN(Date) AS min_date,
-    --MAX(Date) AS max_date
-  FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_liveintent`
-  GROUP BY
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial
-
-  UNION ALL
-
-  SELECT
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial,
-    SUM(Net_Revenue) AS Net_Revenue,
-    --MIN(Date) AS min_date,
-    --MAX(Date) AS max_date
-  FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_nativo`
-  GROUP BY
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial
-
-  UNION ALL
-
-  SELECT
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial,
-    SUM(Net_Revenue) AS Net_Revenue,
-    --MIN(Date) AS min_date,
-    --MAX(Date) AS max_date
-  FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_adsense`
-  GROUP BY
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial
-
-  UNION ALL
-
-  SELECT
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial,
-    SUM(Net_Revenue) AS Net_Revenue,
-    --MIN(Date) AS min_date,
-    --MAX(Date) AS max_date
-  FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_solve`
-  GROUP BY
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial
-
-  UNION ALL
-
-  SELECT
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial,
-    SUM(Net_Revenue) AS Net_Revenue,
-    --MIN(Date) AS min_date,
-    --MAX(Date) AS max_date
-  FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_kargo`
-  GROUP BY
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial
-
-  UNION ALL
-
-  SELECT
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial,
-    SUM(Net_Revenue) AS Net_Revenue,
-    --MIN(Date) AS min_date,
-    --MAX(Date) AS max_date
-  FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_gumgum`
-  GROUP BY
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial
-
-  UNION ALL
-
-  SELECT
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial,
-    SUM(Net_Revenue) AS Net_Revenue,
-    --MIN(Date) AS min_date,
-    --MAX(Date) AS max_date
-  FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_outbrain`
-  GROUP BY
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial
-
-  UNION ALL
-
-  SELECT
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial,
-    SUM(Net_Revenue) AS Net_Revenue,
-    --MIN(Date) AS min_date,
-    --MAX(Date) AS max_date
-  FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_videointelligence`
-  GROUP BY
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial
-
-  UNION ALL
-
-  SELECT
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial,
-    SUM(Net_Revenue) AS Net_Revenue,
-    --MIN(Date) AS min_date,
-    --MAX(Date) AS max_date
-  FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_youtube`
-  GROUP BY
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial
-
-  UNION ALL
-
-  SELECT
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial,
-    SUM(Net_Revenue) AS Net_Revenue,
-    --MIN(Date) AS min_date,
-    --MAX(Date) AS max_date
-  FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_yieldmo`
-  GROUP BY
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial
-
-  UNION ALL
-
-  SELECT
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial,
-    SUM(Net_Revenue) AS Net_Revenue,
-    --MIN(Date) AS min_date,
-    --MAX(Date) AS max_date
-  FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_triplelift`
-  GROUP BY
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial
-
-  UNION ALL
-
-  SELECT
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial,
-    SUM(Net_Revenue) AS Net_Revenue,
-    --MIN(Date) AS min_date,
-    --MAX(Date) AS max_date
-  FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_jeeng`
-  GROUP BY
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial
-
-  UNION ALL
-
-  SELECT
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial,
-    SUM(Net_Revenue) AS Net_Revenue,
-    --MIN(Date) AS min_date,
-    --MAX(Date) AS max_date
-  FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_aax`
-  GROUP BY
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial
-
-  UNION ALL
-
-  SELECT
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial,
-    SUM(Net_Revenue) AS Net_Revenue,
-    --MIN(Date) AS min_date,
-    --MAX(Date) AS max_date
-  FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_yahoo`
-  GROUP BY
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial
+    nonAdX_programmatic_all AS (
+      SELECT
+        Date,
+        Source,
+        Tag_Site,
+        Ad_Size_initial,
+        Device_type_initial,
+        Country_initial,
+        SUM(Net_Revenue) AS Net_Revenue,
+        --MIN(Date) AS min_date,
+        --MAX(Date) AS max_date
+      FROM `meredith-switchboard.programmatic_all.vw_programmatic_all_nonAdX_partner_aggregate`
+      GROUP BY 1,2,3,4,5,6
   ),
 
-  Pacific_prog_all AS (
+  programmatic_all AS (
+    SELECT *
+    FROM AdX_programmatic_all
+
+    UNION ALL
+
+    SELECT *
+    FROM nonAdX_programmatic_all
+  )
+
   SELECT
-    A.Date,
-    A.Source,
-    A.Tag_Site,
-    A.Ad_Size_initial,
-    A.Device_type_initial,
-    A.Country_initial,
-    SUM(A.Net_Revenue) AS Net_Revenue,
-    --MIN(A.Date) AS min_date,
-    --MAX(A.Date) AS max_date
-  FROM `meredith-switchboard.programmatic_all_partners.vw_programmatic_all_pacific`  AS A
-  GROUP BY
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial
-),
-
-  programmatic_all AS(
-  SELECT *
-  FROM AdX_programmatic_all_untagged
-
-  UNION ALL
-
-  SELECT *
-  FROM programmatic_all_untagged
-
-  UNION ALL
-
-  SELECT *
-  FROM Pacific_prog_all )
-
-SELECT
     Date,
     Tag_Site,
     Source,
@@ -697,53 +95,39 @@ SELECT
     SUM(Net_Revenue) AS Net_Revenue,
     --min_date,
     --max_date
-FROM programmatic_all
-GROUP BY
-    Date,
-    Source,
-    Tag_Site,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial
-    --min_date,
-    --max_date
+  FROM programmatic_all
+  GROUP BY 1,2,3,4,5,6
 ),
 
 B AS (
-SELECT
+  SELECT
     Tag_Site as map_tag
-FROM `meredith-switchboard.summary_reports.programmatic_tag_mapping`
-GROUP BY
-    map_tag
+  FROM `meredith-switchboard.summary_reports.programmatic_tag_mapping`
+  GROUP BY 1
 )
 
 SELECT
-    Tag_Site,
-    Date,
-    Source,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial,
-    SUM(Net_Revenue) AS Net_Revenue,
-    --min_date,
-    --max_date,
-    B.map_tag
+  Tag_Site,
+  Date,
+  Source,
+  Ad_Size_initial,
+  Device_type_initial,
+  Country_initial,
+  B.map_tag,
+  SUM(Net_Revenue) AS Net_Revenue,
+  --min_date,
+  --max_date,
 FROM A
+
 LEFT JOIN B
 ON A.Tag_Site = B.map_tag
+
 WHERE
-    B.map_tag IS NULL
-    AND A.Tag_Site IS NOT NULL
-    AND date >= DATE_SUB(date, INTERVAL 120 day)
-    --AND Net_Revenue > 1
-GROUP BY
-    A.Tag_Site,
-    Date,
-    Source,
-    Ad_Size_initial,
-    Device_type_initial,
-    Country_initial,
-    --min_date,
-    --max_date,
-    B.map_tag
+  B.map_tag IS NULL
+  AND A.Tag_Site IS NOT NULL
+  AND date >= DATE_SUB(date, INTERVAL 120 day)
+  --AND Net_Revenue > 1
+
+GROUP BY 1,2,3,4,5,6,7
+
 --ORDER BY Net_Revenue DESC

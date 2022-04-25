@@ -10,13 +10,6 @@
 
 WITH
 
-prog_tag_map AS (
-    SELECT
-        * EXCEPT(tag_site),
-        tag_site AS tag_site_map
-    FROM `meredith-switchboard.summary_reports.programmatic_tag_mapping`
-),
-
 gumgum_base AS (
     SELECT
         table_id,
