@@ -1,14 +1,14 @@
 ## view name: vw_programmatic_all_rogers
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on: 3/22/2022
+## Last modified on: 6/23/2022
 ## Last modified by: bj.hollowell@meredith.com
-## Change log:  3/22/2022 Removed individual mapping within partner views so it can all be done once in prod version.
-##              Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
+## Change log:  6/23/22, updated eff date of rev calculation to get more accuratre exchange rate
+##
 ##
 ## notes:
 ## This view has two different base, cleaned, deduped portions that get unioned into a final output.
-## Monthly is 1st then Allrecipes (AR) is below.
+## Monthly is 1st then Allrecipes (AR) is below. AR started being included in the Monthly file as of Feb 2022.
 
 WITH
 
@@ -109,11 +109,15 @@ rogers_monthly_cleaned AS (
         '' AS deal_id,
         '' AS deal_name,
         SUM(CASE
-            WHEN Date <= '2020-03-31' THEN (Total_CPM_CPC_CPD_and_vCPM_revenue_CA_ * 0.7) * 0.7
-            WHEN Date >= '2021-01-01' THEN (Total_CPM_CPC_CPD_and_vCPM_revenue_CA_ * 0.7) * 0.7
-            ELSE (Total_CPM_CPC_CPD_and_vCPM_revenue_CA_ * 0.7) * 0.75
+            WHEN Date <= '2020-03-31'                       THEN (Total_CPM_CPC_CPD_and_vCPM_revenue_CA_ * 0.7) * 0.7
+            WHEN Date BETWEEN '2020-04-01' AND '2020-12-31' THEN (Total_CPM_CPC_CPD_and_vCPM_revenue_CA_ * 0.7) * 0.75
+            WHEN Date BETWEEN '2021-01-01' AND '2022-05-31' THEN (Total_CPM_CPC_CPD_and_vCPM_revenue_CA_ * 0.7) * 0.7
+            ELSE (Total_CPM_CPC_CPD_and_vCPM_revenue_CA_ * 0.78) * 0.7
             END ) AS net_revenue,
-        SUM((Total_CPM_CPC_CPD_and_vCPM_revenue_CA_ * 0.7)) AS gross_revenue,
+        SUM(CASE
+            WHEN Date < '2022-06-01' THEN (Total_CPM_CPC_CPD_and_vCPM_revenue_CA_ * 0.7)
+            ELSE (Total_CPM_CPC_CPD_and_vCPM_revenue_CA_ * 0.78)
+            END ) AS gross_revenue,
         SUM(Total_impressions) AS imps,
         NULL AS active_view_measured_impressions,
         NULL AS active_view_viewed_impressions,
@@ -123,6 +127,7 @@ rogers_monthly_cleaned AS (
     GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
 ),
 
+## Rogers started sending all data in the monthly file as of Feb 2022
 rogers_allrecipes_base AS (
     SELECT
         table_id,
