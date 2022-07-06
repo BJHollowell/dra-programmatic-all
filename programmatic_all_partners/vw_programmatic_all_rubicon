@@ -1,9 +1,10 @@
 ## view name: vw_programmatic_all_rubicon
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on: 6/16/2022
+## Last modified on: 7/6/2022
 ## Last modified by: bj.hollowell@dotdashmdp.com
-## Change log:  pull in data from both MDP and DD API instances
+## Change log:  6/16/22 pull in data from both MDP and DD API instances
+##              7/6/22 add line for transaction_type = 'PG'
 ##
 ##
 ## notes:
@@ -60,6 +61,7 @@ rubicon_dss_cleaned AS (
         CONCAT('Rubicon', ';', site, ';', zone) AS tag_site,
         CASE
             WHEN site LIKE '%Guaranteed%' THEN 'PG'
+            WHEN site LIKE '%PG%'         THEN 'PG'
             WHEN deal = 'Open Market'     THEN 'Open'
             ELSE 'PMP'
             END AS transaction_type,
@@ -129,6 +131,7 @@ rubicon_cleaned AS (
         CONCAT('Rubicon', ';', site, ';', zone) AS tag_site,
         CASE
             WHEN site LIKE '%Guaranteed%' THEN 'PG'
+            WHEN site LIKE '%PG%'         THEN 'PG'
             WHEN deal = 'Open Market'     THEN 'Open'
             ELSE 'PMP'
             END AS transaction_type,
