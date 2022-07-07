@@ -1,10 +1,11 @@
 ## view name: vw_programmatic_all_rubicon
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on: 7/6/2022
+## Last modified on: 7/7/2022
 ## Last modified by: bj.hollowell@dotdashmdp.com
 ## Change log:  6/16/22 pull in data from both MDP and DD API instances
 ##              7/6/22 add line for transaction_type = 'PG'
+##              7/7/22 add rev share logic to net_revenue calc
 ##
 ##
 ## notes:
@@ -110,8 +111,19 @@ rubicon_dss_cleaned AS (
         deal_id AS deal_id,
         deal AS deal_name,
         SUM(CASE
-            WHEN site LIKE '%Guaranteed%' THEN (revenue * 0.97)
-            ELSE (revenue * 0.85)
+            WHEN
+                date < '2022-07-01' AND
+                (site LIKE '%Guaranteed%' OR site LIKE '%PG%')
+                THEN (revenue * 0.97)
+            WHEN
+                date < '2022-07-01' AND
+                (site NOT LIKE '%Guaranteed%' AND site NOT LIKE '%PG%')
+                THEN (revenue * 0.85)
+            WHEN
+                date >= '2022-07-01' AND
+                deal = 'Open'
+                THEN (revenue * 0.89)
+            ELSE (revenue * 0.96)
             END ) AS net_revenue,
         SUM(revenue) AS gross_revenue,
         SUM(impressions) AS imps,
@@ -180,8 +192,19 @@ rubicon_cleaned AS (
         deal_id AS deal_id,
         deal AS deal_name,
         SUM(CASE
-            WHEN site LIKE '%Guaranteed%' THEN (revenue * 0.97)
-            ELSE (revenue * 0.85)
+            WHEN
+                date < '2022-07-01' AND
+                (site LIKE '%Guaranteed%' OR site LIKE '%PG%')
+                THEN (revenue * 0.97)
+            WHEN
+                date < '2022-07-01' AND
+                (site NOT LIKE '%Guaranteed%' AND site NOT LIKE '%PG%')
+                THEN (revenue * 0.85)
+            WHEN
+                date >= '2022-07-01' AND
+                deal = 'Open'
+                THEN (revenue * 0.89)
+            ELSE (revenue * 0.96)
             END ) AS net_revenue,
         SUM(revenue) AS gross_revenue,
         SUM(paid_impressions) AS imps,
