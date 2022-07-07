@@ -1,10 +1,12 @@
 ## view name: vw_programmatic_all_index
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on: 3/22/2022
+## Last modified on: 7/7/2022
 ## Last modified by: bj.hollowell@meredith.com
-## Change log:  3/22/2022 Removed individual mapping within partner views so it can all be done once in prod version.
-##              Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
+## Change log:  4/7/22 Created static table for 2020 Index OB data rather than the wildcard.
+##              7/7/22 added tag_site logic for when supply_source = 'enterprise'
+##
+##
 ## notes:
 ##
 
@@ -27,7 +29,8 @@ index_base AS (
         1 AS impressions,
         dsp_id,
         trading_desk_id,
-        site_id
+        site_id,
+        domain
     FROM `meredith-switchboard.indexexchange_audit_logs.indexexchange_impression_log`
     WHERE
         TIMESTAMP_MILLIS(timestamp) >= '2020-01-01' AND
@@ -46,6 +49,7 @@ index_mapped AS (
         A.brand_name,
         A.deal_id,
         A.creative_type,
+        A.domain,
         B.buyer_name AS buyer_name,
         C.deal_type AS deal_type,
         C.deal_name AS deal_name,
@@ -68,7 +72,7 @@ index_mapped AS (
     LEFT JOIN `meredith-switchboard.indexexchange_audit_logs.mapping_sites` E
     ON A.site_id = E.site_id
 
-    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16
 ),
 
 index_cleaned AS (
@@ -77,7 +81,10 @@ index_cleaned AS (
         'Index CAL' AS source,
         TIMESTAMP_MILLIS(timestamp) AS date,
         'Index' AS partner,
-        CONCAT('Index', ';', index_mapped.site_name) AS tag_site,
+        CASE
+            WHEN supply_source = 'enterprise' THEN CONCAT('Index', ';', index_mapped.domain)
+            ELSE CONCAT('Index', ';', index_mapped.site_name)
+            END AS tag_site,
         CASE
             WHEN deal_type IS NULL THEN 'Open'
             ELSE 'PMP'
