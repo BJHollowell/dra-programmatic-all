@@ -102,7 +102,7 @@ WITH A AS (
 B AS (
   SELECT
     Tag_Site as map_tag
-  FROM `meredith-switchboard.summary_reports.programmatic_tag_mapping`
+  FROM `about-dss-01.dotdash_meredith.sheet_programmatic_tag_map`
   GROUP BY 1
 )
 
