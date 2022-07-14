@@ -1,10 +1,11 @@
 ## view name: vw_programmatic_all
 ## description: production view for all programmatic partner views summary
 ## created by: BJ Hollowell bj.hollowell@meredith.com
-## Last modified on: 7/13/2022
+## Last modified on: 7/14/2022
 ## Last modified by: bj.hollowell@dotdashmdp.com
 ## Change log: 4/12/2022 vertical_helper updated to category_map
 ##             7/13/2022 changed tag_map location to live gsheet in about-dss-01
+##             7/14/2022 update to gsheet procedure
 ##
 ##
 ## notes:
@@ -152,7 +153,7 @@ AdX_programmatic_all_tagged AS (
         C.agency
     FROM AdX_programmatic_all_untagged AS A
 
-    LEFT JOIN `about-dss-01.dotdash_meredith.sheet_programmatic_tag_map` AS B
+    LEFT JOIN `meredith-switchboard.summary_reports.programmatic_tag_mapping_v2` AS B
     ON A.tag_site = B.tag_site
 
     LEFT JOIN `meredith-switchboard.programmatic_all.Buyer_mapping_table` AS C
@@ -260,7 +261,7 @@ programmatic_all_tagged AS (
         '' AS mvp_partner
     FROM `meredith-switchboard.programmatic_all.tbl_programmatic_all_nonAdX_partner_aggregate` AS A
 
-    LEFT JOIN `about-dss-01.dotdash_meredith.sheet_programmatic_tag_map` AS B
+    LEFT JOIN `meredith-switchboard.summary_reports.programmatic_tag_mapping_v2` AS B
     ON A.tag_site = B.tag_site
 
     LEFT JOIN `meredith-switchboard.programmatic_all.Buyer_mapping_table` AS C
