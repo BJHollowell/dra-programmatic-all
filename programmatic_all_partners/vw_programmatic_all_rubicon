@@ -6,7 +6,7 @@
 ## Change log:  6/16/22 pull in data from both MDP and DD API instances
 ##              7/6/22 add line for transaction_type = 'PG'
 ##              7/7/22 add rev share logic to net_revenue calc
-##
+##              8/4/22 revise path_type logic to avoid ad_server_api_code field
 ##
 ## notes:
 ##
@@ -94,7 +94,8 @@ rubicon_dss_cleaned AS (
             WHEN site LIKE '%prebid%' THEN 'HB'
             WHEN site LIKE '%PreBid%' THEN 'HB'
             WHEN ad_server_api_code = 'FastLane'     THEN 'HB'
-            WHEN ad_server_api_code = 'Exchange API' THEN 'TAM'
+            WHEN date <  '2022-06-01' AND ad_server_api_code = 'Exchange API' THEN 'TAM'
+            WHEN date >= '2022-06-01' AND UPPER(site) LIKE '%A9%' THEN 'TAM'
             ELSE 'Tag in adserver'
             END AS path_type,
         '' AS device_type_initial,
@@ -175,7 +176,8 @@ rubicon_cleaned AS (
             WHEN site LIKE '%prebid%' THEN 'HB'
             WHEN site LIKE '%PreBid%' THEN 'HB'
             WHEN ad_server_api_code = 'FastLane'     THEN 'HB'
-            WHEN ad_server_api_code = 'Exchange API' THEN 'TAM'
+            WHEN date <  '2022-06-01' AND ad_server_api_code = 'Exchange API' THEN 'TAM'
+            WHEN date >= '2022-06-01' AND UPPER(site) LIKE '%A9%' THEN 'TAM'
             ELSE 'Tag in adserver'
             END AS path_type,
         '' AS device_type_initial,
