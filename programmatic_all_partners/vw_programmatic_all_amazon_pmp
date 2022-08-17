@@ -1,33 +1,60 @@
 ## view name: vw_programmatic_all_amazon_pmp
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on: 3/22/2022
+## Last modified on: 8/17/2022
 ## Last modified by: bj.hollowell@meredith.com
 ## Change log:  3/22/2022 Removed individual mapping within partner views so it can all be done once in prod version.
-##              Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
+##                        Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
+##              8/17/2022 update the partner view to incorporate new amazon a9 reports
 ## notes:
 ##
 
 WITH
 
-amazon_pmp_base AS (
+amazon_pmp_base_new AS (
     SELECT
-        date,
-        site,
-        ad_slot,
-        size,
-        media_type,
+        CAST(PARSE_DATE('%Y%m%d', CAST(date AS STRING)) AS TIMESTAMP) AS date,
+        site_name,
+        slot_name,
+        slot_size,
+        response_media_type,
         device_type,
         country,
-        buyer,
-        deal,
+        deal_buyer,
+        deal_name,
+        SUM(earnings) AS earnings,
+        SUM(impressions) AS impressions,
+        NULL AS qualified_requests,
+        NULL AS bids_submitted
+    FROM `ddm-dataops-switchboard.amazon.deals_*`
+    WHERE date >= 20220807
+    GROUP BY 1,2,3,4,5,6,7,8,9
+),
+
+amazon_pmp_base_old AS (
+    SELECT
+        date,
+        site AS site_name,
+        ad_slot AS slot_name,
+        size AS slot_size,
+        media_type AS response_media_type,
+        device_type,
+        country,
+        buyer AS deal_buyer,
+        deal AS deal_name,
         SUM(earnings) AS earnings,
         SUM(impressions) AS impressions,
         SUM(qualified_requests) AS qualified_requests,
         SUM(bids_submitted) AS bids_submitted
     FROM `meredith-switchboard.amazon.deals_health_*`
-    WHERE date >= '2020-01-01'
+    WHERE date BETWEEN '2020-01-01' AND '2022-08-06'
     GROUP BY 1,2,3,4,5,6,7,8,9
+),
+
+amazon_pmp_union AS (
+    SELECT * FROM amazon_pmp_base_new
+    UNION ALL
+    SELECT * FROM amazon_pmp_base_old
 ),
 
 amazon_pmp_cleaned AS (
@@ -35,28 +62,28 @@ amazon_pmp_cleaned AS (
         'Amazon Deals Email' AS source,
         CAST(date AS TIMESTAMP) AS date,
         'A9' AS partner,
-        CONCAT('A9', ';', site, ';', ad_slot) AS tag_site,
+        CONCAT('A9', ';', site_name, ';', slot_name) AS tag_site,
         'PMP' AS transaction_type,
         '' AS site,
         '' AS tier,
-        size AS ad_size_initial,
+        slot_size AS ad_size_initial,
         CASE
-            WHEN size LIKE '300x250'      THEN '300x250'
-            WHEN size LIKE '320x50'       THEN '320x50'
-            WHEN size LIKE '728x90'       THEN '728x90'
-            WHEN size LIKE '300x600'      THEN '300x600'
-            WHEN size LIKE '970x250'      THEN '970x250'
-            WHEN size LIKE '300x1050'     THEN '300x1050'
-            WHEN size LIKE '970x90'       THEN '970x90'
-            WHEN size LIKE '%preroll%'    THEN 'Video/Overlay'
-            WHEN ad_slot LIKE '%preroll%' THEN 'Video/Overlay'
+            WHEN slot_size LIKE '300x250'      THEN '300x250'
+            WHEN slot_size LIKE '320x50'       THEN '320x50'
+            WHEN slot_size LIKE '728x90'       THEN '728x90'
+            WHEN slot_size LIKE '300x600'      THEN '300x600'
+            WHEN slot_size LIKE '970x250'      THEN '970x250'
+            WHEN slot_size LIKE '300x1050'     THEN '300x1050'
+            WHEN slot_size LIKE '970x90'       THEN '970x90'
+            WHEN slot_size LIKE '%preroll%'    THEN 'Video/Overlay'
+            WHEN slot_name LIKE '%preroll%' THEN 'Video/Overlay'
             ELSE 'Other'
             END AS ad_size,
-        media_type AS ad_type,
+        response_media_type AS ad_type,
         'HB' AS path_type,
         CASE
-            WHEN ad_slot LIKE '%.amp%'       THEN 'AMP'
-            WHEN ad_slot LIKE '%.AMP%'       THEN 'AMP'
+            WHEN slot_name LIKE '%.amp%'       THEN 'AMP'
+            WHEN slot_name LIKE '%.AMP%'       THEN 'AMP'
             WHEN device_type LIKE '%Phone%'  THEN 'MobileWeb'
             WHEN device_type LIKE '%phone%'  THEN 'MobileWeb'
             WHEN device_type LIKE '%PC%'     THEN 'Desktop'
@@ -77,10 +104,10 @@ amazon_pmp_cleaned AS (
             ELSE 'XUS'
             END AS country,
         'Unknown' AS dsp_initial,
-        buyer AS buyer_initial,
+        deal_buyer AS buyer_initial,
         '' AS advertiser_initial,
         'Unknown' AS deal_id,
-        deal AS deal_name,
+        deal_name AS deal_name,
         SUM(earnings) AS net_revenue,
         SUM(earnings) AS gross_revenue,
         SUM(impressions) AS imps,
@@ -88,7 +115,7 @@ amazon_pmp_cleaned AS (
         NULL AS active_view_viewed_impressions,
         SUM(qualified_requests) AS bid_requests,
         SUM(bids_submitted) AS bid_responses
-    FROM amazon_pmp_base
+    FROM amazon_pmp_base_new
     WHERE impressions <> 0
     GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
 )
