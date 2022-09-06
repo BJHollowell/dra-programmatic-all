@@ -1,10 +1,11 @@
 ## view name: vw_programmatic_all_triplelift
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on: 3/22/2022
+## Last modified on: 9/6/2022
 ## Last modified by: bj.hollowell@meredith.com
 ## Change log:  3/22/2022 Removed individual mapping within partner views so it can all be done once in prod version.
-##              Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
+##                        Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
+##              9/6/2022  exclude Google_OB data
 ## notes:
 ##
 
@@ -25,7 +26,7 @@ triplelift_base AS (
         SUM(revenue) AS revenue,
         SUM(rendered) AS rendered
     FROM `meredith-switchboard.triplelift.triplelift_api_*`
-    WHERE report_date >= '2020-01-01'
+    WHERE report_date >= '2020-01-01' AND supply_source <> 'Google_OB'
     GROUP BY 1,2,3,4,5,6,7,8,9,10
 ),
 

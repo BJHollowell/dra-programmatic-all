@@ -1,13 +1,14 @@
 ## view name: vw_programmatic_all_rubicon
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on: 8/15/2022
+## Last modified on: 9/6/2022
 ## Last modified by: bj.hollowell@dotdashmdp.com
 ## Change log:  6/16/22 pull in data from both MDP and DD API instances
-##              7/6/22 add line for transaction_type = 'PG'
-##              7/7/22 add rev share logic to net_revenue calc
-##              8/4/22 revise path_type logic to avoid ad_server_api_code field
+##              7/6/22  add line for transaction_type = 'PG'
+##              7/7/22  add rev share logic to net_revenue calc
+##              8/4/22  revise path_type logic to avoid ad_server_api_code field
 ##              8/15/22 replace DD Rubicon data with SBS ingest to keep all prior fields
+##              9/6/22  remove the date parameter on 'PG' net_revenue logic
 ##
 ## notes:
 ##
@@ -115,7 +116,6 @@ rubicon_dss_cleaned AS (
         deal AS deal_name,
         SUM(CASE
             WHEN
-                date < '2022-07-01' AND
                 (site LIKE '%Guaranteed%' OR site LIKE '%PG%')
                 THEN (revenue * 0.97)
             WHEN
@@ -124,7 +124,7 @@ rubicon_dss_cleaned AS (
                 THEN (revenue * 0.85)
             WHEN
                 date >= '2022-07-01' AND
-                deal = 'Open'
+                deal = 'Open Market'
                 THEN (revenue * 0.89)
             ELSE (revenue * 0.96)
             END ) AS net_revenue,
@@ -197,7 +197,6 @@ rubicon_cleaned AS (
         deal AS deal_name,
         SUM(CASE
             WHEN
-                date < '2022-07-01' AND
                 (site LIKE '%Guaranteed%' OR site LIKE '%PG%')
                 THEN (revenue * 0.97)
             WHEN
@@ -206,7 +205,7 @@ rubicon_cleaned AS (
                 THEN (revenue * 0.85)
             WHEN
                 date >= '2022-07-01' AND
-                deal = 'Open'
+                deal = 'Open Market'
                 THEN (revenue * 0.89)
             ELSE (revenue * 0.96)
             END ) AS net_revenue,
