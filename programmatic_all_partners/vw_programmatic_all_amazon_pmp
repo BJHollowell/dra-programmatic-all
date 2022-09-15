@@ -1,15 +1,36 @@
 ## view name: vw_programmatic_all_amazon_pmp
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on: 8/17/2022
+## Last modified on: 9/13/2022
 ## Last modified by: bj.hollowell@meredith.com
 ## Change log:  3/22/2022 Removed individual mapping within partner views so it can all be done once in prod version.
 ##                        Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
 ##              8/17/2022 update the partner view to incorporate new amazon a9 reports
+##              9/13/2022 change to amazon data stream data in lieu of custom reporting for 9/1 or later only
 ## notes:
 ##
 
 WITH
+
+amazon_pmp_base_data_stream AS (
+    SELECT
+        CAST(date AS TIMESTAMP) AS date,
+        site_name,
+        slot_name,
+        slot_size,
+        response_media_type,
+        device_type,
+        country,
+        deal_buyer,
+        deal_name,
+        SUM(impressions * cpm / 1000) AS earnings,
+        SUM(impressions) AS impressions,
+        NULL AS qualified_requests,
+        NULL AS bids_submitted
+    FROM `ddm-dataops-switchboard.amazon.stream_deals_*`
+    WHERE date >= '2022-09-01' AND auction_type = 'PMP'
+    GROUP BY 1,2,3,4,5,6,7,8,9
+),
 
 amazon_pmp_base_new AS (
     SELECT
@@ -27,7 +48,7 @@ amazon_pmp_base_new AS (
         NULL AS qualified_requests,
         NULL AS bids_submitted
     FROM `ddm-dataops-switchboard.amazon.deals_*`
-    WHERE date >= 20220807
+    WHERE date BETWEEN 20220807 AND 20220831
     GROUP BY 1,2,3,4,5,6,7,8,9
 ),
 
@@ -52,6 +73,8 @@ amazon_pmp_base_old AS (
 ),
 
 amazon_pmp_union AS (
+    SELECT * FROM amazon_pmp_base_data_stream
+    UNION ALL
     SELECT * FROM amazon_pmp_base_new
     UNION ALL
     SELECT * FROM amazon_pmp_base_old
@@ -115,7 +138,7 @@ amazon_pmp_cleaned AS (
         NULL AS active_view_viewed_impressions,
         SUM(qualified_requests) AS bid_requests,
         SUM(bids_submitted) AS bid_responses
-    FROM amazon_pmp_base_new
+    FROM amazon_pmp_union
     WHERE impressions <> 0
     GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
 )
