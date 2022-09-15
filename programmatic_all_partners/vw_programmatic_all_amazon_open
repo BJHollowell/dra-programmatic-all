@@ -1,12 +1,13 @@
 ## view name: vw_programmatic_all_amazon_open
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on: 9/13/2022
+## Last modified on: 9/15/2022
 ## Last modified by: bj.hollowell@meredith.com
 ## Change log:  3/22/2022 Removed individual mapping within partner views so it can all be done once in prod version.
 ##                        Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
 ##              8/17/2022 update the partner view to incorporate new amazon a9 reports
 ##              9/13/2022 change to amazon data stream data in lieu of custom reporting for 9/1 or later only
+##              9/15/2022 backfill of data stream for Aug complete, amend to use data stream for 8/1 onward
 ## notes:
 ##
 
@@ -33,7 +34,7 @@ amazon_open_bid_metrics_data_stream AS (
         SUM(impressions) AS impressions,
         SUM(impressions * cpm / 1000) AS earnings
     FROM `ddm-dataops-switchboard.amazon.stream_bid_metrics_*`
-    WHERE date >= '2022-09-01'
+    WHERE date >= '2022-08-07'
     GROUP BY 1,2,3,4,5,6,7,8,9,10
 ),
 
@@ -58,57 +59,7 @@ amazon_open_bid_metrics_mobileapps_data_stream AS (
         SUM(impressions) AS impressions,
         SUM(impressions * cpm / 1000) AS earnings
     FROM `ddm-dataops-switchboard.amazon.stream_mobile_apps_bid_metrics_*`
-    WHERE date >= '2022-09-01'
-    GROUP BY 1,2,3,4,5,6,7,8,9,10
-),
-
-amazon_open_bid_metrics AS (
-    SELECT
-        CAST(PARSE_DATE('%Y%m%d', CAST(date AS STRING)) AS TIMESTAMP) AS date,
-        hour,
-        site_name,
-        slot_size,
-        slot_name,
-        country,
-        device_type,
-        bidder,
-        inventory_type,
-        auction_type,
-        SUM(bid_requests_forwarded) AS bid_requests_forwarded,
-        SUM(bid_responses) AS bid_responses,
-        SUM(bids_won) AS bids_won,
-        SUM(bids_punt) AS bids_punt,
-        SUM(bids_error) AS bids_error,
-        SUM(bids_timeout) AS bids_timeout,
-        SUM(impressions) AS impressions,
-        SUM(earnings) AS earnings
-    FROM `ddm-dataops-switchboard.amazon.bid_metrics_*`
-    WHERE date BETWEEN 20220807 AND 20220831
-    GROUP BY 1,2,3,4,5,6,7,8,9,10
-),
-
-amazon_open_bid_metrics_mobileapps AS (
-    SELECT
-        CAST(PARSE_DATE('%Y%m%d', CAST(date AS STRING)) AS TIMESTAMP) AS date,
-        hour,
-        '' AS site_name,
-        slot_size,
-        '' AS slot_name,
-        country,
-        device_type,
-        bidder,
-        inventory_type,
-        auction_type,
-        SUM(bid_requests_forwarded) AS bid_requests_forwarded,
-        SUM(bid_responses) AS bid_responses,
-        SUM(bids_won) AS bids_won,
-        SUM(bids_punt) AS bids_punt,
-        SUM(bids_error) AS bids_error,
-        SUM(bids_timeout) AS bids_timeout,
-        SUM(impressions) AS impressions,
-        SUM(earnings) AS earnings
-    FROM `ddm-dataops-switchboard.amazon.mobile_apps_bid_metrics_*`
-    WHERE date BETWEEN 20220807 AND 20220831
+    WHERE date >= '2022-08-07'
     GROUP BY 1,2,3,4,5,6,7,8,9,10
 ),
 
@@ -166,10 +117,6 @@ amazon_open_base AS (
     SELECT * FROM amazon_open_bid_metrics_data_stream
     UNION ALL
     SELECT * FROM amazon_open_bid_metrics_mobileapps_data_stream
-    UNION ALL
-    SELECT * FROM amazon_open_bid_metrics
-    UNION ALL
-    SELECT * FROM amazon_open_bid_metrics_mobileapps
     UNION ALL
     SELECT * FROM amazon_open_bids
     UNION ALL
