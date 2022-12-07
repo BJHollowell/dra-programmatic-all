@@ -1,13 +1,12 @@
 ## view name: vw_programmatic_all_index
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@dotdashmdp.com
-## Last modified on: 12/05/2022
+## Last modified on: 11/28/2022
 ## Last modified by: bj.hollowell@dotdashmdp.com
 ## Change log:  04/07/22 Created static table for 2020 Index OB data rather than the wildcard.
 ##              07/07/22 added tag_site logic for when supply_source = 'enterprise'
 ##              11/16/22 added about-dss-01 source for ddm base from 7/1/22 onward
 ##              11/28/22 fix the bid section date range
-##              12/05/22 amend transaction_type logic to use deal_id, not deal_type
 ##
 ##
 ## notes:
@@ -120,7 +119,7 @@ index_cleaned AS (
             ELSE CONCAT('Index', ';', index_mapped.site_name)
             END AS tag_site,
         CASE
-            WHEN deal_id = 'omitted' THEN 'Open'
+            WHEN deal_type IS NULL THEN 'Open'
             ELSE 'PMP'
             END AS transaction_type,
         '' AS site,
