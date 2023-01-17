@@ -7,6 +7,7 @@
 ##              07/07/22 added tag_site logic for when supply_source = 'enterprise'
 ##              11/16/22 added about-dss-01 source for ddm base from 7/1/22 onward
 ##              11/28/22 fix the bid section date range
+##              01/17/23 andy added additional parquet table
 ##
 ##
 ## notes:
@@ -14,10 +15,35 @@
 
 WITH
 
+index_ddm_base_parquet AS (
+    SELECT
+        dt,
+        CAST(EXTRACT(datetime from PARSE_TIMESTAMP("%Y-%m-%d %T", timestamp) at time zone 'US/Eastern') as timestamp) as timestamp,
+        size,
+        inventory_channel,
+        supply_source,
+        device_type,
+        country,
+        brand_name,
+        deal_id,
+        creative_type,
+        net_revenue,
+        gross_revenue,
+        1 AS impressions,
+        SAFE_CAST(dsp_id AS INT64) AS dsp_id,
+        SAFE_CAST(trading_desk_id AS INT64) AS trading_desk_id,
+        SAFE_CAST(site_id AS INT64) AS site_id,
+        domain
+    FROM `about-dss-01.index_exchange.parquet_impression_logs`
+    WHERE
+        dt >='2023-01-01'
+        AND supply_source <> 'ebda'
+),
+
 index_ddm_base AS (
     SELECT
         dt,
-        timestamp,
+        cast(EXTRACT(datetime from timestamp at time zone 'US/Eastern') as timestamp) as timestamp,
         size,
         inventory_channel,
         supply_source,
@@ -35,8 +61,8 @@ index_ddm_base AS (
         domain
     FROM `about-dss-01.index_exchange.impression_logs_ddm`
     WHERE
-        dt >= '2020-07-01' AND
-        supply_source <> 'ebda'
+        dt BETWEEN '2020-07-01' AND '2022-12-31'
+        AND supply_source <> 'ebda'
 ),
 
 index_mdp_base AS (
@@ -60,14 +86,16 @@ index_mdp_base AS (
         domain
     FROM `meredith-switchboard.indexexchange_audit_logs.indexexchange_impression_log`
     WHERE
-        TIMESTAMP_MILLIS(timestamp) BETWEEN '2020-01-01' AND '2022-06-30' AND
-        supply_source <> 'ebda'
+        TIMESTAMP_MILLIS(timestamp) BETWEEN '2020-01-01' AND '2022-06-30'
+        AND supply_source <> 'ebda'
 ),
 
 index_base_union AS(
     SELECT * FROM index_mdp_base
     UNION ALL
     SELECT * FROM index_ddm_base
+    UNION ALL
+    SELECT * FROM index_ddm_base_parquet
 ),
 
 index_mapped AS (
