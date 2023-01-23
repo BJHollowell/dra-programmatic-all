@@ -1,15 +1,16 @@
 ## view name: vw_programmatic_all_amazon_open
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
-## created by: bj.hollowell@meredith.com
-## Last modified on: 9/29/2022
-## Last modified by: bj.hollowell@meredith.com
-## Change log:  3/22/2022 Removed individual mapping within partner views so it can all be done once in prod version.
-##                        Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
-##              8/17/2022 update the partner view to incorporate new amazon a9 reports
-##              9/13/2022 change to amazon data stream data in lieu of custom reporting for 9/1 or later only
-##              9/15/2022 backfill of data stream for Aug complete, amend to use data stream for 8/1 onward
-##              9/21/2022 dedupe logic added based on switchboard_processing_time to account for restatement files
-##              9/29/2022 exclude bidder = 'Xandr' and amend partner for bidder = 'Yahoo Inc' to 'Yahoo'
+## created by: bj.hollowell@dotdashmdp.com
+## Last modified on: 01/20/2023
+## Last modified by: bj.hollowell@dotdashmdp.com
+## Change log:  03/22/22 Removed individual mapping within partner views so it can all be done once in prod version.
+##                       Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
+##              08/17/22 update the partner view to incorporate new amazon a9 reports
+##              09/13/22 change to amazon data stream data in lieu of custom reporting for 9/1 or later only
+##              09/15/22 backfill of data stream for Aug complete, amend to use data stream for 8/1 onward
+##              09/21/22 dedupe logic added based on switchboard_processing_time to account for restatement files
+##              09/29/22 exclude bidder = 'Xandr' and amend partner for bidder = 'Yahoo Inc' to 'Yahoo'
+##              01/20/23 exclude bidder = 'Yahoo Inc' as of 12-19-2022
 ## notes:
 ##
 
@@ -303,6 +304,7 @@ amazon_open_cleaned AS (
         AND bidder NOT LIKE '%AdColony%'
         AND bidder NOT LIKE '%Nativo%'
         AND bidder NOT LIKE '%Xandr%'
+        AND (bidder NOT LIKE '%Yahoo Inc%' AND date >= '2022-12-19')
     GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
 ),
 

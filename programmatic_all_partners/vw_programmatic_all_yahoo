@@ -1,16 +1,18 @@
 ## view name: vw_programmatic_all_yahoo
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
-## created by: bj.hollowell@meredith.com
-## Last modified on: 3/22/2022
-## Last modified by: bj.hollowell@meredith.com
-## Change log:  3/22/2022 Removed individual mapping within partner views so it can all be done once in prod version.
-##              Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
+## created by: bj.hollowell@dotdashmdp.com
+## Last modified on: 1/20/2023
+## Last modified by: bj.hollowell@dotdashmdp.com
+## Change log:  03/22/22 Removed individual mapping within partner views so it can all be done once in prod version.
+##                       Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
+##              01/20/23 Amend base CTEs to account for both Prebid and TAM ingests and union them
+##                       Also update cleaned CTE logic to property map new TAM data
 ## notes:
 ##
 
 WITH
 
-yahoo_base AS (
+yahoo_base_prebid AS (
     SELECT
         date,
         advertiser,
@@ -21,10 +23,40 @@ yahoo_base AS (
         seat_name,
         site,
         buyer,
+        deal_id,
+        deal_name,
+        seller,
         SUM(publisher_revenue) AS publisher_revenue,
         SUM(ads_delivered) AS ads_delivered
     FROM `meredith-switchboard.verizon.verizon_analytics_*`
-    GROUP BY 1,2,3,4,5,6,7,8,9
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12
+),
+
+yahoo_base_tam AS (
+    SELECT
+        date,
+        advertiser,
+        placement_type_name,
+        position,
+        country_name,
+        device_type_name,
+        seat_name,
+        site,
+        buyer,
+        deal_id,
+        deal_name,
+        seller,
+        SUM(publisher_revenue) AS publisher_revenue,
+        SUM(ads_delivered) AS ads_delivered
+    FROM `meredith-switchboard.verizon.verizon_analytics_tam_*`
+    WHERE date >= '2022-12-19'
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12
+),
+
+yahoo_base_final AS (
+    SELECT * FROM yahoo_base_prebid
+    UNION ALL
+    SELECT * FROM yahoo_base_tam
 ),
 
 yahoo_cleaned AS (
@@ -32,8 +64,11 @@ yahoo_cleaned AS (
        'Yahoo API' AS source,                               ## formerly 'Verizon API'
         CAST(Date AS TIMESTAMP) AS date,
         'Yahoo' AS partner,
-        CONCAT('Verizon', ';', position) AS tag_site,       ## keeping as is for now and then can be updated at later date with overhaul of prog_tag_map
-        'Open' AS transaction_type,
+        CONCAT('Verizon', ';', site, ';', position) AS tag_site,       ## keeping as is for now and then can be updated at later date with overhaul of prog_tag_map
+        CASE
+            WHEN deal_name IS NULL OR deal_name = 'N/A' OR deal_name = '' THEN 'Open'
+            ELSE 'PMP'
+            END AS transaction_type,
         '' AS site,
         '' AS tier,
         '' AS ad_size_initial,
@@ -42,7 +77,10 @@ yahoo_cleaned AS (
             WHEN placement_type_name = 'Banner' THEN 'Display'
             ELSE 'Video'
             END AS ad_type,
-        'HB' AS path_type,
+        CASE
+            WHEN site LIKE '%TAM%' THEN 'TAM'
+            ELSE 'HB'
+            END AS path_type,
         device_type_name AS device_type_initial,
         CASE
             WHEN device_type_name = 'Phone'             THEN 'MobileWeb'
@@ -60,8 +98,8 @@ yahoo_cleaned AS (
         buyer AS dsp_initial,
         seat_name AS buyer_initial,
         advertiser AS advertiser_initial,
-        '' AS deal_id,
-        '' AS deal_name,
+        deal_id AS deal_id,
+        deal_name AS deal_name,
         SUM(publisher_revenue) AS net_revenue,
         SUM((publisher_revenue / 0.85)) AS gross_revenue,
         SUM(ads_delivered) AS imps,
@@ -69,7 +107,7 @@ yahoo_cleaned AS (
         NULL AS active_view_viewed_impressions,
         NULL AS bid_requests,
         NULL AS bid_repsonses
-    FROM yahoo_base
+    FROM yahoo_base_final
     GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
 )
 
