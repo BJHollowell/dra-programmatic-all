@@ -1,10 +1,11 @@
 ## view name: vw_programmatic_all_trustx
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on: 3/22/2022
-## Last modified by: bj.hollowell@meredith.com
-## Change log:  3/22/2022 Removed individual mapping within partner views so it can all be done once in prod version.
-##              Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
+## Last modified on: 01/24/23
+## Last modified by: bj.hollowell@dotdashmdp.com
+## Change log:  03/22/22 Removed individual mapping within partner views so it can all be done once in prod version.
+##                       Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
+##              01/24/23 change data source to trustx API from 12/1/22 onward
 ## notes:
 ##
 
@@ -88,7 +89,31 @@ trustx_base_new AS (
             GROUP BY 1 ) B
         ON A.date = B.date AND A._table_suffix = B.max_table_num
     )
+    WHERE date BETWEEN '2021-11-16' AND '2022-11-30'
     GROUP BY 1,2,3,4,5,6,7,8,9
+),
+
+trustx_base_api AS (
+    SELECT
+        dt,
+        CAST(JSON_VALUE(`json`, '$.mapping[8]') AS STRING) AS ad_unit_name,
+        CAST(JSON_VALUE(`json`, '$.name[8]') AS STRING) AS ad_unit_id,
+        CAST(JSON_VALUE(`json`, '$.name[0]') AS STRING) AS creative_size,
+        CAST(JSON_VALUE(`json`, '$.mapping[1]') AS STRING) AS dsp_name,
+        CAST(JSON_VALUE(`json`, '$.name[1]') AS STRING) AS dsp_id,
+        CAST(JSON_VALUE(`json`, '$.mapping[7]') AS STRING) AS buyer_name,
+        CAST(JSON_VALUE(`json`, '$.name[7]') AS STRING) AS buyer_id,
+        CAST(JSON_VALUE(`json`, '$.name[3]') AS STRING) AS page_domain,
+        CAST(JSON_VALUE(`json`, '$.name[6]') AS STRING) AS deal_id,
+        CAST(JSON_VALUE(`json`, '$.mapping[6]') AS STRING) AS deal_name,
+        CAST(JSON_VALUE(`json`, '$.name[10]') AS STRING) AS device_type,
+        SUM(CAST(JSON_VALUE(`json`, '$.data[2].value') AS NUMERIC)) AS adv_payout_billable,
+        SUM(CAST(JSON_VALUE(`json`, '$.data[7].value') AS NUMERIC)) AS billable_events,
+        SUM(CAST(JSON_VALUE(`json`, '$.data[0].value') AS INT)) AS yes_bids,
+        SUM(CAST(JSON_VALUE(`json`, '$.data[1].value') AS INT)) AS no_bids
+    FROM `about-dss-01.trustx.json_delivery`
+    WHERE dt >= '2022-12-01'
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12
 ),
 
 trustx_cleaned_old AS (
@@ -195,7 +220,66 @@ trustx_cleaned_new AS (
     GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
 ),
 
+trustx_cleaned_api AS (
+    SELECT
+        'TrustX Email' AS source,
+        CAST(dt AS TIMESTAMP) AS date,
+        'TrustX' AS partner,
+        CONCAT('TrustX', ';', ad_unit_name) AS tag_site,
+        CASE
+            WHEN deal_id IS NULL THEN 'Open'
+            ELSE 'PMP'
+            END AS transaction_type,
+        '' AS site,
+        '' AS tier,
+        creative_size AS ad_size_initial,
+        CASE
+            WHEN creative_size = '300x250'  THEN creative_size
+            WHEN creative_size = '320x50'   THEN creative_size
+            WHEN creative_size = '728x90'   THEN creative_size
+            WHEN creative_size = '300x600'  THEN creative_size
+            WHEN creative_size = '300x1050' THEN creative_size
+            WHEN creative_size = '970x250'  THEN creative_size
+            WHEN creative_size = '640x360'  THEN 'Video/Overlay'
+            ELSE 'Other'
+            END AS ad_size,
+        CASE
+            WHEN creative_size = '640x360' THEN 'Video'
+            ELSE 'Display'
+            END AS ad_type,
+        'HB' AS path_type,
+        device_type AS device_type_initial,
+        'to_be_mapped' AS device_type,
+        '' AS country_initial,
+        'Unknown' AS country,
+        dsp_name AS dsp_initial,
+        buyer_name AS buyer_initial,
+        page_domain AS advertiser_initial,
+        CASE
+            WHEN deal_id IS NULL THEN 'Open'
+            ELSE deal_id
+            END AS deal_id,
+        CASE
+            WHEN deal_name IS NULL THEN 'Open'
+            ELSE deal_name
+            END AS deal_name,
+        SUM(CASE
+            WHEN dsp_name = 'GRID' THEN (adv_payout_billable * 0.92)
+            ELSE (adv_payout_billable * 0.875)
+            END ) AS net_revenue,
+        SUM(adv_payout_billable) AS gross_revenue,
+        SUM(billable_events) AS imps,
+        NULL AS active_view_measured_impressions,
+        NULL AS active_view_viewed_impressions,
+        SUM((yes_bids + no_bids)) AS bid_requests,
+        SUM(yes_bids) AS bid_responses
+    FROM trustx_base_api
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
+),
+
 trustx_unioned AS (
+    SELECT * FROM trustx_cleaned_api
+    UNION ALL
     SELECT * FROM trustx_cleaned_new
     UNION ALL
     SELECT * FROM trustx_cleaned_old
