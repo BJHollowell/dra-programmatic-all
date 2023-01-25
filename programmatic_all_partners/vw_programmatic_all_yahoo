@@ -28,7 +28,7 @@ yahoo_base_prebid AS (
         seller,
         SUM(publisher_revenue) AS publisher_revenue,
         SUM(ads_delivered) AS ads_delivered
-    FROM `meredith-switchboard.verizon.verizon_analytics_*`
+    FROM `meredith-switchboard.verizon.verizon_analytics_2*`
     GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12
 ),
 
