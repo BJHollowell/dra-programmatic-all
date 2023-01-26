@@ -1,7 +1,7 @@
 ## view name: vw_programmatic_all_amazon_open
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@dotdashmdp.com
-## Last modified on: 01/25/2023
+## Last modified on: 01/26/2023
 ## Last modified by: bj.hollowell@dotdashmdp.com
 ## Change log:  03/22/22 Removed individual mapping within partner views so it can all be done once in prod version.
 ##                       Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
@@ -11,11 +11,62 @@
 ##              09/21/22 dedupe logic added based on switchboard_processing_time to account for restatement files
 ##              09/29/22 exclude bidder = 'Xandr' and amend partner for bidder = 'Yahoo Inc' to 'Yahoo'
 ##              01/20/23 exclude bidder = 'Yahoo Inc' as of 12-19-2022
-##              01/25/23 revise 'Yahoo Inc' exclusion
+##              01/25/23 revise 'Yahoo Inc' exclusion logic
+##              01/26/23 update source data to 'about-dss-01'
 ## notes:
 ##
 
 WITH
+
+amazon_open_bid_metrics_data_stream_parquet AS (
+    SELECT
+        CAST(dt AS TIMESTAMP) AS date,
+        hour,
+        site_name,
+        slot_size,
+        slot_name,
+        country,
+        device_type,
+        bidder,
+        inventory_type,
+        auction_type,
+        SUM(CAST(bid_requests_forwarded AS INT64)) AS bid_requests_forwarded,
+        SUM(CAST(bid_responses AS INT64)) AS bid_responses,
+        SUM(CAST(bids_won AS INT64)) AS bids_won,
+        SUM(CAST(bids_punt AS INT64)) AS bids_punt,
+        SUM(CAST(bids_error AS INT64)) AS bids_error,
+        SUM(CAST(bids_timeout AS INT64)) AS bids_timeout,
+        SUM(CAST(impressions AS INT64)) AS impressions,
+        SUM(CAST(impressions AS INT64) * CAST(cpm AS FLOAT64) / 1000) AS earnings
+    FROM `about-dss-01.amazon_publisher.parquet_bid_metrics`
+    WHERE dt >= '2023-01-01'
+    GROUP BY 1,2,3,4,5,6,7,8,9,10
+),
+
+amazon_open_bid_metrics_mobileapps_data_stream_parquet AS (
+    SELECT
+        CAST(dt AS TIMESTAMP) AS date,
+        hour,
+        '' AS site_name,
+        slot_size,
+        '' AS slot_name,
+        country,
+        device_type,
+        bidder,
+        inventory_type,
+        auction_type,
+        SUM(CAST(bid_requests_forwarded AS INT64)) AS bid_requests_forwarded,
+        SUM(CAST(bid_responses AS INT64)) AS bid_responses,
+        SUM(CAST(bids_won AS INT64)) AS bids_won,
+        SUM(CAST(bids_punt AS INT64)) AS bids_punt,
+        SUM(CAST(bids_error AS INT64)) AS bids_error,
+        SUM(CAST(bids_timeout AS INT64)) AS bids_timeout,
+        SUM(CAST(impressions AS INT64)) AS impressions,
+        SUM(CAST(impressions AS INT64) * CAST(cpm AS FLOAT64) / 1000) AS earnings
+    FROM `about-dss-01.amazon_publisher.parquet_mobile_app_bid_metrics`
+    WHERE dt >= '2023-01-01'
+    GROUP BY 1,2,3,4,5,6,7,8,9,10
+),
 
 amazon_open_bid_metrics_data_stream AS (
     SELECT
@@ -68,7 +119,7 @@ amazon_open_bid_metrics_data_stream AS (
             GROUP BY 1,2 ) B
         ON A.date = B.date AND A.hour = B.hour AND A.switchboard_processing_time = B.max_file
     )
-    WHERE date >= '2022-08-07'
+    WHERE date BETWEEN '2022-08-07' AND '2022-12-31'
     GROUP BY 1,2,3,4,5,6,7,8,9,10
 ),
 
@@ -121,7 +172,7 @@ amazon_open_bid_metrics_mobileapps_data_stream AS (
             GROUP BY 1,2 ) B
         ON A.date = B.date AND A.hour = B.hour AND A.switchboard_processing_time = B.max_file
     )
-    WHERE date >= '2022-08-07'
+    WHERE date BETWEEN '2022-08-07' AND '2022-12-31'
     GROUP BY 1,2,3,4,5,6,7,8,9,10
 ),
 
@@ -176,6 +227,10 @@ amazon_open_md AS (
 ),
 
 amazon_open_base AS (
+    SELECT * FROM amazon_open_bid_metrics_data_stream_parquet
+    UNION ALL
+    SELECT * FROM amazon_open_bid_metrics_mobileapps_data_stream_parquet
+    UNION ALL
     SELECT * FROM amazon_open_bid_metrics_data_stream
     UNION ALL
     SELECT * FROM amazon_open_bid_metrics_mobileapps_data_stream
@@ -333,16 +388,16 @@ amazon_open_final AS (
         deal_name,
         net_revenue,
         CASE
-            WHEN partner = 'DistrictM' THEN (gross_revenue / 0.90)
-            WHEN partner = 'DMX' THEN (gross_revenue / 0.90)
-            WHEN partner = 'EMX' THEN (gross_revenue / 0.90)
-            WHEN partner = 'GumGum' THEN (gross_revenue / 0.90)
-            WHEN partner = 'Pubmatic' THEN (gross_revenue / 0.82)
-            WHEN partner = 'Pulsepoint' THEN (gross_revenue / 0.80)
+            WHEN partner = 'DistrictM'    THEN (gross_revenue / 0.90)
+            WHEN partner = 'DMX'          THEN (gross_revenue / 0.90)
+            WHEN partner = 'EMX'          THEN (gross_revenue / 0.90)
+            WHEN partner = 'GumGum'       THEN (gross_revenue / 0.90)
+            WHEN partner = 'Pubmatic'     THEN (gross_revenue / 0.82)
+            WHEN partner = 'Pulsepoint'   THEN (gross_revenue / 0.80)
             WHEN partner = 'Sharethrough' THEN (gross_revenue / 0.90)
-            WHEN partner = 'Sonobi' THEN (gross_revenue / 0.85)
-            WHEN partner = 'Verizon' THEN (gross_revenue / 0.85)
-            WHEN partner = 'YieldMo' THEN (gross_revenue / 0.70)
+            WHEN partner = 'Sonobi'       THEN (gross_revenue / 0.85)
+            WHEN partner = 'Verizon'      THEN (gross_revenue / 0.85)
+            WHEN partner = 'YieldMo'      THEN (gross_revenue / 0.70)
             ELSE gross_revenue
             END AS gross_revenue,
         imps,
