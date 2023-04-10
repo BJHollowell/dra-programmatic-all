@@ -6,6 +6,7 @@
 ## Change log:  03/22/2022 Removed individual mapping within partner views so it can all be done once in prod version.
 ##                         Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
 ##              03/06/2023 Add Feb 2023 as month where we do not get higher net_rev value
+##              04/10/2023 Add Mar 2023 as month where we do not get higher net_rev value
 ## notes:
 ##
 
@@ -66,7 +67,8 @@ outbrain_cleaned AS (
                 '2021-09-01',
                 '2021-10-01',
                 '2021-11-01',
-                '2023-02-01') THEN revenue
+                '2023-02-01',
+                '2023-03-01') THEN revenue
             ELSE revenue * 1.286
             END ) AS net_revenue,
         SUM((revenue / 0.7)) AS gross_revenue,
