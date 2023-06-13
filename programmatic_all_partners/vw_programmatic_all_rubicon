@@ -1,23 +1,45 @@
 ## view name: vw_programmatic_all_rubicon
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on: 9/6/2022
+## Last modified on: 06/08/2023
 ## Last modified by: bj.hollowell@dotdashmdp.com
-## Change log:  6/16/22 pull in data from both MDP and DD API instances
-##              7/6/22  add line for transaction_type = 'PG'
-##              7/7/22  add rev share logic to net_revenue calc
-##              8/4/22  revise path_type logic to avoid ad_server_api_code field
-##              8/15/22 replace DD Rubicon data with SBS ingest to keep all prior fields
-##              9/6/22  remove the date parameter on 'PG' net_revenue logic
+## Change log:  06/16/22 pull in data from both MDP and DD API instances
+##              07/06/22 add line for transaction_type = 'PG' 
+##              07/07/22 add rev share logic to net_revenue calc
+##              08/04/22 revise path_type logic to avoid ad_server_api_code field 
+##              08/15/22 replace DD Rubicon data with SBS ingest to keep all prior fields
+##              09/06/22 remove the date parameter on 'PG' net_revenue logic
+##              06/08/23 update data source to about-dss-01 data effective 4/1/23
 ##
 ## notes:
 ##
 
 WITH
 
+rubicon_base_ddm AS (
+      SELECT
+        dt as date,
+        json_value(`json`, '$.site') as site,
+        json_value(`json`, '$.zone') as zone,
+        json_value(`json`, '$.deal') as deal,
+        json_value(`json`, '$.size') as size,
+        json_value(`json`, '$.ad_server_api_code') as ad_server_api_code,
+        json_value(`json`, '$.country') as country,
+        json_value(`json`, '$.partner') as partner,
+        json_value(`json`, '$.buyer') as buyer,
+        json_value(`json`, '$.advertiser') as advertiser,
+        json_value(`json`, '$.deal_id') as deal_id,
+        SUM(cast(json_value(`json`, '$.publisher_gross_revenue') as numeric)) AS revenue,
+        SUM(cast(json_value(`json`, '$.paid_impression') as int64)) AS paid_impressions,
+        --_table_suffix AS table_id
+    FROM `about-dss-01.rubicon.json_advertiser_delivery`
+    WHERE dt >= '2023-04-01' AND cast(json_value(`json`, '$.paid_impression')as int64) <> 0
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11
+),
+
 rubicon_dss_base AS (
       SELECT
-        date,
+        DATE(date) as date,
         site,
         zone,
         deal,
@@ -32,8 +54,14 @@ rubicon_dss_base AS (
         SUM(paid_impressions) AS paid_impressions
         --_table_suffix AS table_id
     FROM `ddm-dataops-switchboard.magnite.magnite_summary_*`
-    WHERE date >= '2022-06-01' AND paid_impressions <> 0
+    WHERE date BETWEEN '2022-06-01' AND '2023-03-31' AND paid_impressions <> 0
     GROUP BY 1,2,3,4,5,6,7,8,9,10,11
+),
+
+rubicon_base_ddm_final AS (
+    SELECT * FROM rubicon_base_ddm
+    UNION ALL
+    SELECT * FROM rubicon_dss_base
 ),
 
 rubicon_base AS (
@@ -115,11 +143,11 @@ rubicon_dss_cleaned AS (
         deal_id AS deal_id,
         deal AS deal_name,
         SUM(CASE
-            WHEN
+            WHEN 
                 (site LIKE '%Guaranteed%' OR site LIKE '%PG%')
                 THEN (revenue * 0.97)
-            WHEN
-                date < '2022-07-01' AND
+            WHEN 
+                date < '2022-07-01' AND 
                 (site NOT LIKE '%Guaranteed%' AND site NOT LIKE '%PG%')
                 THEN (revenue * 0.85)
             WHEN
@@ -134,7 +162,7 @@ rubicon_dss_cleaned AS (
         NULL AS active_view_viewed_impressions,
         NULL AS bid_requests,
         NULL AS bid_responses
-    FROM rubicon_dss_base
+    FROM rubicon_base_ddm_final
     GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
 ),
 
@@ -196,11 +224,11 @@ rubicon_cleaned AS (
         deal_id AS deal_id,
         deal AS deal_name,
         SUM(CASE
-            WHEN
+            WHEN  
                 (site LIKE '%Guaranteed%' OR site LIKE '%PG%')
                 THEN (revenue * 0.97)
-            WHEN
-                date < '2022-07-01' AND
+            WHEN 
+                date < '2022-07-01' AND 
                 (site NOT LIKE '%Guaranteed%' AND site NOT LIKE '%PG%')
                 THEN (revenue * 0.85)
             WHEN
@@ -253,11 +281,14 @@ rubicon_historical AS (
 ),
 
 rubicon_unioned AS (
-    SELECT * FROM rubicon_cleaned
+    SELECT * FROM rubicon_cleaned 
     UNION ALL
     SELECT * FROM rubicon_dss_cleaned
     UNION ALL
-    SELECT * FROM rubicon_historical
+    SELECT * FROM rubicon_historical 
 )
 
 SELECT * FROM rubicon_unioned
+
+
+

@@ -1,14 +1,57 @@
 ## view name: vw_programmatic_all_roundel
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on: 3/22/2022
+## Last modified on: 06/08/2023
 ## Last modified by: bj.hollowell@meredith.com
-## Change log:  3/22/2022 Removed individual mapping within partner views so it can all be done once in prod version.
-##              Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
+## Change log:  03/22/22 Removed individual mapping within partner views so it can all be done once in prod version.
+##                       Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
+##              06/08/23 Update data source to ddm-switchboard starting 4/1/23
 ## notes:
 ##
 
 WITH
+
+roundel_brands_base_ddm AS (
+    SELECT
+        table_num,
+        day,
+        domain,
+        size,
+        device_type,
+        dsp_name,
+        buyer_name,
+        brand_name,
+        deal_id,
+        deal_name,
+        SUM(deal_net_revenue) AS deal_net_revenue,
+        SUM(deal_impressions) AS deal_impressions
+    FROM (
+        SELECT
+            _table_suffix AS table_num,
+            A.day,
+            domain,
+            size,
+            device_type,
+            dsp_name,
+            buyer_name,
+            brand_name,
+            deal_id,
+            deal_name,
+            deal_net_revenue,
+            deal_impressions
+        FROM `ddm-dataops-switchboard.roundel.brand_delivery_*` A
+
+        INNER JOIN (
+            SELECT
+                day,
+                MAX(_table_suffix) AS max_table_num
+            FROM `ddm-dataops-switchboard.roundel.brand_delivery_*`
+            GROUP BY 1 ) B
+        ON A.day = B.day AND A._table_suffix =B.max_table_num
+    )
+    WHERE day >= '2023-04-01'
+    GROUP BY 1,2,3,4,5,6,7,8,9,10
+),
 
 roundel_brands_base AS (
     SELECT
@@ -48,8 +91,14 @@ roundel_brands_base AS (
             GROUP BY 1 ) B
         ON A.day = B.day AND A._table_suffix =B.max_table_num
     )
-    WHERE day >= '2020-01-01'
+    WHERE day BETWEEN '2020-01-01' AND '2023-03-31'
     GROUP BY 1,2,3,4,5,6,7,8,9,10
+),
+
+roundel_brands_base_final AS (
+    SELECT * FROM roundel_brands_base_ddm
+    UNION ALL
+    SELECT * FROM roundel_brands_base
 ),
 
 roundel_brands_cleaned AS (
@@ -109,8 +158,46 @@ roundel_brands_cleaned AS (
         NULL AS active_view_viewed_impressions,
         NULL AS bid_requests,
         NULL AS bid_responses
-    FROM roundel_brands_base
+    FROM roundel_brands_base_final
     GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
+),
+
+roundel_deals_base_ddm AS (
+    SELECT
+        table_num,
+        day,
+        domain,
+        size,
+        device_type,
+        country,
+        deal_id,
+        deal_name,
+        SUM(bid_request) AS bid_request,
+        SUM(bid_chosen) AS bid_chosen
+    FROM (
+        SELECT
+            _table_suffix AS table_num,
+            A.day,
+            domain,
+            size,
+            device_type,
+            country,
+            deal_id,
+            deal_name,
+            bid_request,
+            bid_chosen
+        FROM `ddm-dataops-switchboard.roundel.deals_delivery_*` A
+
+        INNER JOIN (
+            SELECT
+                day,
+                MAX(_table_suffix) AS max_table_num
+            FROM `ddm-dataops-switchboard.roundel.deals_delivery_*`
+            GROUP BY 1 ) B
+        ON A.day = B.day AND A._table_suffix =B.max_table_num
+    )
+    WHERE day >= '2023-04-01'
+    GROUP BY 1,2,3,4,5,6,7,8
 ),
 
 roundel_deals_base AS (
@@ -147,8 +234,14 @@ roundel_deals_base AS (
             GROUP BY 1 ) B
         ON A.day = B.day AND A._table_suffix =B.max_table_num
     )
-    WHERE day >= '2020-01-01'
+    WHERE day BETWEEN '2020-01-01' AND '2023-03-31'
     GROUP BY 1,2,3,4,5,6,7,8
+),
+
+roundel_deals_base_final AS (
+    SELECT * FROM roundel_deals_base_ddm
+    UNION ALL
+    SELECT * FROM roundel_deals_base
 ),
 
 roundel_deals_cleaned AS (
@@ -208,7 +301,7 @@ roundel_deals_cleaned AS (
         NULL AS active_view_viewed_impressions,
         SUM(bid_request) AS bid_requests,
         SUM(bid_chosen) AS bid_responses
-    FROM roundel_deals_base
+    FROM roundel_deals_base_final
     GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
 ),
 

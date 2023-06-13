@@ -1,14 +1,37 @@
 ## view name: vw_programmatic_all_openx
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on: 3/22/2022
+## Last modified on: 06/08/2023
 ## Last modified by: bj.hollowell@meredith.com
-## Change log:  3/22/2022 Removed individual mapping within partner views so it can all be done once in prod version.
-##              Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
+## Change log:  03/22/22 Removed individual mapping within partner views so it can all be done once in prod version.
+##                       Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
+##              06/08/23 Update data source to about-dss-01 effective 4/1/23
 ## notes:
 ##
 
 WITH
+
+openx_base_ddm AS (
+    SELECT
+        CAST(dt AS STRING) AS day,
+        pageDomain,
+        publisherAdUnitName,
+        publisherAccountName,
+        userDeviceType,
+        userGeoCountry,
+        demandPartnerAccountName,
+        '' AS buyerName,
+        '' AS openXBrandName,
+        privateMarketplacePublisherDealId,
+        privateMarketplacePublisherDealName,
+        '' AS ad_size,
+        '' AS table_id,
+        SUM(marketPublisherRevenueinPCoin) AS marketPublisherRevenueinPCoin,
+        SUM(marketImpressions) AS marketImpressions
+    FROM `about-dss-01.openx.json_delivery`
+    WHERE dt >= '2023-04-01'
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13
+),
 
 openx_base AS (
     SELECT
@@ -55,8 +78,14 @@ openx_base AS (
         ON A.day = B.day AND A._table_suffix = B.max_table_id
     ## OpenX stopped sending multiple dates in each file back in Sept. 2020, but deduping is needed going back to those dates.
     )
-    WHERE day >= '2020-01-01'
+    WHERE day BETWEEN '2020-01-01' AND '2023-03-31'
     GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13
+),
+
+openx_base_final AS (
+    SELECT * FROM openx_base_ddm
+    UNION ALL
+    SELECT * FROM openx_base
 ),
 
 openx_cleaned AS (
@@ -132,7 +161,7 @@ openx_cleaned AS (
         NULL AS active_view_viewed_impressions,
         NULL AS bid_requests,
         NULL AS bid_repsonses
-    FROM openx_base
+    FROM openx_base_final
     GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
 )
 

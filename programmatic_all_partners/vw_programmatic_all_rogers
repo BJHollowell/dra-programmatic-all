@@ -1,16 +1,31 @@
 ## view name: vw_programmatic_all_rogers
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on: 6/23/2022
+## Last modified on: 06/08/2023
 ## Last modified by: bj.hollowell@meredith.com
-## Change log:  6/23/22, updated eff date of rev calculation to get more accuratre exchange rate
-##
+## Change log:  06/23/22 updated eff date of rev calculation to get more accuratre exchange rate
+##              06/08/23 update data source to about-dss-01 data effective 4/1/23
+##              
 ##
 ## notes:
 ## This view has two different base, cleaned, deduped portions that get unioned into a final output.
 ## Monthly is 1st then Allrecipes (AR) is below. AR started being included in the Monthly file as of Feb 2022.
 
 WITH
+
+rogers_monthly_base_ddm AS (
+    SELECT
+        dt AS Date,
+        adUnit1 AS Ad_unit_1,
+        adUnit2 AS Ad_unit_2,
+        creativeSize AS Creative_Size2,
+        deviceCategory AS Device_category,
+        SUM(totalCpmCpcCpdAndVcpmRevenueCa) AS Total_CPM_CPC_CPD_and_vCPM_revenue_CA_,
+        SUM(totalImpressions) AS Total_impressions
+    FROM `about-dss-01.rogers.delivery`
+    WHERE dt >= '2023-04-01'
+    GROUP BY 1,2,3,4,5
+),
 
 rogers_monthly_deduped_1 AS (
     SELECT
@@ -24,7 +39,7 @@ rogers_monthly_deduped_1 AS (
         FROM `meredith-switchboard.rogers.rogers_meredith_01_monthly_*`
         GROUP BY 1 ) B
     ON A.date = B.join_date AND A._table_suffix = B.max_table_id
-    WHERE A.date >= '2020-01-01'
+    WHERE A.date BETWEEN '2020-01-01' AND '2023-03-31'
 ),
 
 rogers_monthly_deduped_2 AS (
@@ -53,8 +68,8 @@ rogers_monthly_deduped_2 AS (
 
 rogers_monthly_base AS (
     SELECT
-        table_id,
-        Date,
+        -- table_id,
+        DATE(Date) as Date,
         Ad_unit_1,
         Ad_unit_2,
         Creative_Size2,
@@ -62,7 +77,13 @@ rogers_monthly_base AS (
         SUM(Total_CPM_CPC_CPD_and_vCPM_revenue_CA_) AS Total_CPM_CPC_CPD_and_vCPM_revenue_CA_,
         SUM(Total_impressions) AS Total_impressions
     FROM rogers_monthly_deduped_2
-    GROUP BY 1,2,3,4,5,6
+    GROUP BY 1,2,3,4,5
+),
+
+rogers_monthly_base_final AS (
+    SELECT * FROM rogers_monthly_base_ddm
+    UNION ALL
+    SELECT * FROM rogers_monthly_base
 ),
 
 rogers_monthly_cleaned AS (
@@ -123,7 +144,7 @@ rogers_monthly_cleaned AS (
         NULL AS active_view_viewed_impressions,
         NULL AS bid_requests,
         NULL AS bid_responses
-    FROM rogers_monthly_base
+    FROM rogers_monthly_base_final
     GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
 ),
 

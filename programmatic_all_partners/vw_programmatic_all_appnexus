@@ -1,16 +1,17 @@
 ## view name: vw_programmatic_all_appnexus
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on: 3/22/2022
+## Last modified on: 06/08/2023
 ## Last modified by: bj.hollowell@meredith.com
-## Change log:  3/22/2022 Removed individual mapping within partner views so it can all be done once in prod version.
-##              Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
+## Change log:  03/22/22 Removed individual mapping within partner views so it can all be done once in prod version.
+##                       Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
+##              06/08/23 Update data source to be about-dss-01 data as of 
 ## notes:
 ##
 
 WITH
 
-appnexus_base AS (
+appnexus_base_ddm AS (
     SELECT
         day,
         publisher_name,
@@ -27,9 +28,37 @@ appnexus_base AS (
         SUM(imps) AS imps,
         SUM(view_measured_imps) AS view_measured_imps,
         SUM(imps_viewed) AS imps_viewed
-    FROM `meredith-switchboard.appnexus.seller_brand_review_*`
-    WHERE day >= '2020-01-01'
+    FROM `about-dss-01.xandr.text_seller_brand_review`
+    WHERE day >= '2023-04-01'
     GROUP BY 1,2,3,4,5,6,7,8,9,10,11
+),
+
+appnexus_base AS (
+    SELECT
+        DATE(day) as day,
+        publisher_name,
+        placement_name,
+        deal_name,
+        size,
+        media_type,
+        geo_country_name,
+        bidder_name,
+        buyer_member_name,
+        brand_name,
+        deal_id,
+        SUM(revenue) AS revenue,
+        SUM(imps) AS imps,
+        SUM(view_measured_imps) AS view_measured_imps,
+        SUM(imps_viewed) AS imps_viewed
+    FROM `meredith-switchboard.appnexus.seller_brand_review_*`
+    WHERE day BETWEEN '2020-01-01' AND '2023-03-31'
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11
+),
+
+appnexus_base_union AS (
+    SELECT * FROM appnexus_base_ddm
+    UNION ALL
+    SELECT * FROM appnexus_base
 ),
 
 appnexus_cleaned AS (
@@ -87,7 +116,7 @@ appnexus_cleaned AS (
         SUM(imps_viewed) AS active_view_viewed_impressions,
         NULL AS bid_requests,
         NULL AS bid_responses
-    FROM appnexus_base
+    FROM appnexus_base_union
     GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
 )
 

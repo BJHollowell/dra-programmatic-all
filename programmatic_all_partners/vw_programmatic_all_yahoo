@@ -1,16 +1,59 @@
 ## view name: vw_programmatic_all_yahoo
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@dotdashmdp.com
-## Last modified on: 1/20/2023
+## Last modified on: 06/08/2023
 ## Last modified by: bj.hollowell@dotdashmdp.com
 ## Change log:  03/22/22 Removed individual mapping within partner views so it can all be done once in prod version.
 ##                       Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
 ##              01/20/23 Amend base CTEs to account for both Prebid and TAM ingests and union them
 ##                       Also update cleaned CTE logic to property map new TAM data
+##              06/08/23 Amend data source to be ddm-switchboard as of 4/1/23
 ## notes:
 ##
 
 WITH
+
+yahoo_base_prebid_ddm AS (
+    SELECT
+        date,
+        advertiser,
+        placement_type_name,
+        position,
+        country_name,
+        device_type_name,
+        seat_name,
+        site,
+        buyer,
+        deal_id,
+        deal_name,
+        seller,
+        SUM(publisher_revenue) AS publisher_revenue,
+        SUM(ads_delivered) AS ads_delivered
+    FROM `ddm-dataops-switchboard.yahoo.prebid_delivery_*`
+    WHERE date >= '2023-04-01'
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12
+),
+
+yahoo_base_tam_ddm AS (
+    SELECT
+        date,
+        advertiser,
+        placement_type_name,
+        position,
+        country_name,
+        device_type_name,
+        seat_name,
+        site,
+        buyer,
+        deal_id,
+        deal_name,
+        seller,
+        SUM(publisher_revenue) AS publisher_revenue,
+        SUM(ads_delivered) AS ads_delivered
+    FROM `ddm-dataops-switchboard.yahoo.tam_delivery_*`
+    WHERE date >= '2023-04-01'
+    GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12
+),
 
 yahoo_base_prebid AS (
     SELECT
@@ -29,6 +72,7 @@ yahoo_base_prebid AS (
         SUM(publisher_revenue) AS publisher_revenue,
         SUM(ads_delivered) AS ads_delivered
     FROM `meredith-switchboard.verizon.verizon_analytics_2*`
+    WHERE date < '2023-04-01'
     GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12
 ),
 
@@ -49,11 +93,15 @@ yahoo_base_tam AS (
         SUM(publisher_revenue) AS publisher_revenue,
         SUM(ads_delivered) AS ads_delivered
     FROM `meredith-switchboard.verizon.verizon_analytics_tam_*`
-    WHERE date >= '2022-12-19'
+    WHERE date BETWEEN '2022-12-19' AND '2023-03-31'
     GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12
 ),
 
 yahoo_base_final AS (
+    SELECT * FROM yahoo_base_prebid_ddm
+    UNION ALL
+    SELECT * FROM yahoo_base_tam_ddm
+    UNION ALL
     SELECT * FROM yahoo_base_prebid
     UNION ALL
     SELECT * FROM yahoo_base_tam
@@ -66,7 +114,7 @@ yahoo_cleaned AS (
         'Yahoo' AS partner,
         CONCAT('Verizon', ';', site, ';', position) AS tag_site,       ## keeping as is for now and then can be updated at later date with overhaul of prog_tag_map
         CASE
-            WHEN deal_name IS NULL OR deal_name = 'N/A' OR deal_name = '' THEN 'Open'
+            WHEN deal_name IS NULL OR deal_name = 'N/A' OR deal_name = '' THEN 'Open' 
             ELSE 'PMP'
             END AS transaction_type,
         '' AS site,
@@ -79,7 +127,7 @@ yahoo_cleaned AS (
             END AS ad_type,
         CASE
             WHEN site LIKE '%TAM%' THEN 'TAM'
-            ELSE 'HB'
+            ELSE 'HB' 
             END AS path_type,
         device_type_name AS device_type_initial,
         CASE

@@ -1,15 +1,32 @@
 ## view name: vw_programmatic_all_pubmatic
 ## description: create partner view for programmatic_all that utilizes raw data and standardizes logic within prog_all
 ## created by: bj.hollowell@meredith.com
-## Last modified on: 7/6/2022
+## Last modified on: 06/08/2023
 ## Last modified by: bj.hollowell@dotdashmdp.com
-## Change log:  3/22/2022 Removed individual mapping within partner views so it can all be done once in prod version.
-##              Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
-##              7/6/22 Amended rev share for net_rev calc
+## Change log:  03/22/22 Removed individual mapping within partner views so it can all be done once in prod version.
+##                       Also aggregated the base-level data and cleaned-level data fully to reduce file/processing size(s)
+##              07/06/22 Amended rev share for net_rev calc
+##              06/08/23 Update data source to about-dss-01 data effective 4/1/23
 ## notes:
 ##
 
 WITH
+
+pubmatic_base_ddm AS (
+    SELECT
+        TIMESTAMP(date) as date,
+        '' AS adTagId_name,
+        countryId AS countryId_name,
+        '' AS dsp_id,
+        '' AS buyer,
+        advertiserId AS advertiserId_name,
+        channelId AS channel_id,
+        SUM(netRevenue) AS revenue,
+        SUM(paidImpressions) AS paid_impressions
+    FROM `about-dss-01.pubmatic.text_delivery`
+    WHERE date >= '2023-04-01' AND application = '158139'
+    GROUP BY 1,2,3,4,5,6,7
+),
 
 pubmatic_base AS (
     SELECT
@@ -19,10 +36,11 @@ pubmatic_base AS (
         dsp_id,
         buyer,
         advertiserId_name,
+        '' AS channel_id,
         SUM(revenue) AS revenue,
         SUM(paid_impressions) AS paid_impressions
     FROM `meredith-switchboard.pubmatic.pubmatic_158139_01_*`
-    WHERE date >= '2020-01-01'
+    WHERE date BETWEEN '2020-01-01' AND '2023-03-31'
     GROUP BY 1,2,3,4,5,6
 
     UNION ALL
@@ -34,10 +52,11 @@ pubmatic_base AS (
         dsp_id,
         buyer,
         advertiserId_name,
+        '' AS channel_id,
         SUM(revenue) AS revenue,
         SUM(paid_impressions) AS paid_impressions
     FROM `meredith-switchboard.pubmatic.pubmatic_01_us_*`
-    WHERE date >= '2020-01-01'
+    WHERE date BETWEEN '2020-01-01' AND '2023-03-31'
     GROUP BY 1,2,3,4,5,6
 
     UNION ALL
@@ -49,10 +68,11 @@ pubmatic_base AS (
         dsp_id,
         buyer,
         advertiserId_name,
+        '' AS channel_id,
         SUM(revenue) AS revenue,
         SUM(paid_impressions) AS paid_impressions
     FROM `meredith-switchboard.pubmatic.pubmatic_01_emea_*`
-    WHERE date >= '2020-01-01'
+    WHERE date BETWEEN '2020-01-01' AND '2023-03-31'
     GROUP BY 1,2,3,4,5,6
 
     UNION ALL
@@ -64,10 +84,11 @@ pubmatic_base AS (
         dsp_id,
         buyer,
         advertiserId_name,
+        '' AS channel_id,
         SUM(revenue) AS revenue,
         SUM(paid_impressions) AS paid_impressions
     FROM `meredith-switchboard.pubmatic.pubmatic_01_int_1_*`
-    WHERE date >= '2020-01-01'
+    WHERE date BETWEEN '2020-01-01' AND '2023-03-31'
     GROUP BY 1,2,3,4,5,6
 
     UNION ALL
@@ -79,10 +100,11 @@ pubmatic_base AS (
         dsp_id,
         buyer,
         advertiserId_name,
+        '' AS channel_id,
         SUM(revenue) AS revenue,
         SUM(paid_impressions) AS paid_impressions
     FROM `meredith-switchboard.pubmatic.pubmatic_01_int_2_*`
-    WHERE date >= '2020-01-01'
+    WHERE date BETWEEN '2020-01-01' AND '2023-03-31'
     GROUP BY 1,2,3,4,5,6
 
     UNION ALL
@@ -94,10 +116,11 @@ pubmatic_base AS (
         dsp_id,
         buyer,
         advertiserId_name,
+        '' AS channel_id,
         SUM(revenue) AS revenue,
         SUM(paid_impressions) AS paid_impressions
     FROM `meredith-switchboard.pubmatic.pubmatic_01_int_3_*`
-    WHERE date >= '2020-01-01'
+    WHERE date BETWEEN '2020-01-01' AND '2023-03-31'
     GROUP BY 1,2,3,4,5,6
 
     UNION ALL
@@ -109,11 +132,18 @@ pubmatic_base AS (
         dsp_id,
         buyer,
         advertiserId_name,
+        '' AS channel_id,
         SUM(revenue) AS revenue,
         SUM(paid_impressions) AS paid_impressions
     FROM `meredith-switchboard.pubmatic.pubmatic_01_int_4_*`
-    WHERE date >= '2020-01-01'
+    WHERE date BETWEEN '2020-01-01' AND '2023-03-31'
     GROUP BY 1,2,3,4,5,6
+),
+
+pubmatic_base_final AS (
+    SELECT * FROM pubmatic_base_ddm
+    UNION ALL
+    SELECT * FROM pubmatic_base
 ),
 
 pubmatic_cleaned AS (
@@ -151,17 +181,25 @@ pubmatic_cleaned AS (
         advertiserId_name AS advertiser_initial,
         'Open' AS deal_id,
         'Open' AS deal_name,
-        SUM(CASE
-            WHEN date < '2022-04-01' THEN (revenue * 0.82)
-            ELSE (revenue * 0.87)
-            END) AS net_revenue,
-        SUM(revenue) AS gross_revenue,
+        SUM (
+            CASE
+                WHEN date >= '2023-04-01' THEN revenue
+                WHEN date < '2022-04-01' THEN (revenue * 0.82)
+                ELSE (revenue * 0.87)
+                END
+            ) AS net_revenue,
+        SUM (
+            CASE
+                WHEN date >= '2023-04-01' THEN (revenue / 0.87)
+                ELSE revenue
+                END
+            ) AS gross_revenue,
         SUM(paid_impressions) AS imps,
         NULL AS active_view_measured_impressions,
         NULL AS active_view_viewed_impressions,
         NULL AS bid_requests,
         NULL AS bid_responses
-    FROM pubmatic_base
+    FROM pubmatic_base_final
     GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
 )
 
