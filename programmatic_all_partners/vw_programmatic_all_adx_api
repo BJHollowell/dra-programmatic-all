@@ -1,0 +1,107 @@
+with
+
+base as (
+  select * 
+  from `about-dss-01.google_ad_manager.adx_delivery`
+  where dt >= '2023-07-01'
+),
+
+cleaned as (
+    select
+        'AdX API' as Source,
+        timestamp(dt) as Date,
+        'AdX' as Partner,
+        adUnitName as Tag_Site,
+        case
+            when programmaticChannelName = 'Private Auction' 
+                then 'PMP'
+            else 'Open'
+        end as transaction_channel,
+        creativeSizeDelivered as Ad_size_initial,
+        case
+            when creativeSizeDelivered = "300x250" then "300x250"
+            when creativeSizeDelivered = "320x50" then "320x50"
+            when creativeSizeDelivered = "728x90" then "728x90"
+            when creativeSizeDelivered = "300x600" then "300x600"
+            when creativeSizeDelivered = "Video/Overlay" then "Video/Overlay"
+            when creativeSizeDelivered = "970x250" then "970x250"
+            when creativeSizeDelivered = "300x1050" then "300x1050"
+            when creativeSizeDelivered = "970x90" then "970x90"
+            when creativeSizeDelivered = "Fluid" then "Fluid"
+            when creativeSizeDelivered = "Native" then "Native"
+            when creativeSizeDelivered = "375x50" then "320x50"
+            when creativeSizeDelivered = "414x50" then "320x50"
+            when creativeSizeDelivered = "360x50" then "320x50"
+            when creativeSizeDelivered = "412x50" then "320x50"
+            when creativeSizeDelivered = "400x50" then "320x50"
+            when creativeSizeDelivered = "300x50" then "320x50"
+            when creativeSizeDelivered = "390x50" then "320x50"
+            when creativeSizeDelivered = "405x338" then "300x250"
+            when creativeSizeDelivered = "375x312" then "300x250"
+            when creativeSizeDelivered = "375x250" then "300x250"
+            when creativeSizeDelivered = "360x300" then "300x250"
+            when creativeSizeDelivered = "414x345" then "300x250"
+            when creativeSizeDelivered = "360x250" then "300x250"
+            when creativeSizeDelivered = "320x266" then "300x250"
+            when creativeSizeDelivered = "336x250" then "300x250"
+            when creativeSizeDelivered = "412x250" then "300x250"
+            when creativeSizeDelivered = "336x280" then "300x250"
+            when creativeSizeDelivered = "414x250" then "300x250"
+            when creativeSizeDelivered = "412x343" then "300x250"
+            when creativeSizeDelivered = "375x313" then "300x250"
+            when creativeSizeDelivered = "320x250" then "300x250"
+            when creativeSizeDelivered = "414x359" then "300x250"
+            when creativeSizeDelivered = "414x393" then "300x250"
+            when creativeSizeDelivered = "360x306" then "300x250"
+            when creativeSizeDelivered = "412x359" then "300x250"
+            when creativeSizeDelivered = "375x317" then "300x250"
+            when creativeSizeDelivered = "375x351" then "300x250"
+            when creativeSizeDelivered = "300x337" then "300x250"
+            when creativeSizeDelivered = "393x327" then "300x250"
+            when creativeSizeDelivered = "360x308" then "300x250"
+            when creativeSizeDelivered = "360x310" then "300x250"
+            else "Other" 
+        end as Ad_Size,
+        case
+            when adUnitName like '%vdn%' then 'VDN'
+            when creativeSizeDelivered like '%Video%' and adUnitName like '%vdn%' then 'Video'
+            when creativeSizeDelivered like '%video%' and adUnitName like '%vdn%' then 'Video'
+            when adUnitName like '%spinner%' then 'App'
+            when adUnitName like '%Spinner%' then 'App'
+            else 'Display'
+        end as Ad_type,
+        'AdX' as Path_type, -- ad_exchange_transaction_type for "First look"
+        deviceCategoryName as Device_type_initial,
+        case
+            when adUnitName like '%.amp%' then 'AMP'
+            when deviceCategoryName like '%mobile%' then 'MobileWeb'
+            when deviceCategoryName like '%Mobile%' then 'MobileWeb'
+            when deviceCategoryName like '%Tablet%' then 'Desktop'
+            when deviceCategoryName like '%tablet%' then 'Desktop'
+            when deviceCategoryName like '%Other%' then 'Other'
+            else deviceCategoryName
+        end as Device_type,
+        countryName as Country_initial,
+        case
+            when countryName = 'United States' then 'USA'
+            when countryName = 'N/A' then 'Unknown'
+            else 'XUS'
+        end as Country,
+        '' as DSP_initial, -- ad_exchange_dsp_buyer_network_name
+        buyerNetworkName as Buyer_initial,
+        '' as Advertiser_initial, -- ad_exchange_advertiser_name
+        programmaticDealId as Deal_Id,
+        programmaticDealName as Deal_Name,
+        adExchangeLineItemLevelRevenue / 1000000 as Net_Revenue,
+        adExchangeLineItemLevelRevenue / 1000000 / 0.80 as Gross_Revenue, -- ad_exchange_transaction_type for "Private" and x / 0.90
+        adExchangeLineItemLevelImpressions as Imps,
+        adExchangeActiveViewMeasurableImpressions as active_view_measured_impressions,
+        adExchangeActiveViewViewableImpressions as active_view_viewed_impressions,
+        0 as Bid_requests,
+        0 as Bid_responses
+    from base
+)
+
+select * from cleaned
+
+
